@@ -135,7 +135,7 @@ label.row{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .kpis div{background:var(--bg2);border-radius:12px;padding:9px 10px}
 .kpis span{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
-.kpis b{font-size:21px;font-weight:800}
+.kpis b{font-size:19px;font-weight:800;white-space:nowrap}
 .kpis .hl b{color:var(--orange)}
 .mix{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:12px 0 8px;gap:2px}
 .mix i{display:block;min-width:3px}
@@ -176,6 +176,20 @@ table.tags{border-collapse:collapse;margin-top:6px}table.tags td{padding:1px 8px
 .leaflet-container.trace{cursor:crosshair}
 kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;border:1px solid var(--line)}
 .prog{height:8px;background:var(--card2);border-radius:4px;overflow:hidden;margin:8px 0}.prog div{height:100%;background:linear-gradient(90deg,var(--blue),var(--orange));width:0}
+/* feuille de route et entrées de chemin */
+.ent{width:26px;height:26px;border-radius:50%;background:var(--c);border:3px solid #fff;color:#0a1426;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px #000a}
+.ent.ok{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.45),0 2px 6px #000a}
+.rb{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.rb:first-child{border-top:0}
+.rb .num{width:26px;height:26px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#0a1426}
+.rb .bar{width:6px;align-self:stretch;border-radius:3px;flex:0 0 auto;margin:0 10px}
+.rb .tx{flex:1;min-width:0}.rb .tx b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rb .tx span{font-size:12.5px;color:var(--muted)}
+.rb .acts{display:flex;gap:6px}
+.rb .acts a,.rb .acts button{width:38px;height:38px;border-radius:10px;background:var(--card2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer}
+.rb .acts a{background:var(--blue);border-color:var(--blue)}
+.rbsum{display:flex;gap:8px;flex-wrap:wrap}.rbsum span{background:var(--bg2);border-radius:999px;padding:5px 10px;font-size:13px;font-weight:700}
+.sv{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--blue)!important;color:#fff!important;border-radius:12px!important;padding:11px!important;font-weight:800!important;font-size:15px!important;margin-top:10px;text-decoration:none}
+.nav2{display:flex;gap:6px;margin-top:8px}.nav2 button{flex:1;padding:9px!important}
 /* accueil */
 #welcome{position:fixed;inset:0;z-index:2000;background:rgba(5,10,22,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + var(--sb))}
 @media (min-width:761px){#welcome{align-items:center}}
@@ -214,6 +228,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
 <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
 <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></symbol>
 <symbol id="i-wand" viewBox="0 0 24 24"><path d="M4 20L15 9M14 4v3M19 9h-3M18 5l-2 2M6 4l.8 1.8L8.6 6.6 6.8 7.4 6 9.2 5.2 7.4 3.4 6.6 5.2 5.8z"/></symbol>
+<symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4V8z"/><circle cx="12" cy="13" r="3.5"/></symbol>
 <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17h14v-5l-2-5H7l-2 5v5z"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="17" r="2"/><path d="M5 12h14"/></symbol>
 </defs></svg>
 
@@ -286,12 +301,19 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="tip"><svg class="ic"><use href="#i-pencil"/></svg><span>Passe en <b>Tracer</b> et touche la carte pour poser tes points. <span class="mob-only">Appui long = ajouter un point.</span><span class="pc-only">Clic droit = ajouter un point.</span> Un point posé sur le tracé s'insère dedans ; les points se déplacent au doigt.</span></div>
     </section>
 
+    <section class="card" id="roadbook" style="display:none">
+      <div class="card-h"><svg class="ic"><use href="#i-key"/></svg>Feuille de route</div>
+      <div id="rbSum"></div>
+      <div class="row2" style="margin:10px 0"><button class="btn primary wide" id="bCheck"><svg class="ic"><use href="#i-eye"/></svg>Contrôler les entrées une par une</button></div>
+      <div id="rbList"></div>
+    </section>
+
     <details class="card">
       <summary>Réglages du tracé</summary>
       <div class="muted" style="margin-bottom:4px">Le tracé peut emprunter :</div>
       <div id="routeCats"></div>
       <h3>Préférence</h3>
-      <input type="range" id="pref" min="0" max="4" step="0.5" value="2">
+      <input type="range" id="pref" min="0" max="6" step="0.5" value="3">
       <div class="muted" style="display:flex;justify-content:space-between;margin-top:6px"><span>Plus court</span><span>Max de chemins</span></div>
     </details>
   </div>
@@ -407,7 +429,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v4</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v5</div>
   </div>
 
   </div>
@@ -438,6 +460,7 @@ const CATS={
   no   :{label:'Interdit / sentier / voie rapide',      color:'#dc2626',w:2,   dash:'2 4',route:false,show:true, locked:'noroute'}
 };
 const TRAIL_CATS=new Set(['mine','open','unk','agri','dom','restr']);
+const GREEN_CATS=new Set(['mine','open','unk']);
 const IMPASSABLE=new Set(['bollard','block','jersey_barrier','log','kissing_gate','stile','turnstile','full-height_turnstile','cycle_barrier','fence','wall']);
 const GATE=new Set(['gate','lift_gate','swing_gate','chain','sliding_gate']);
 const isTouch=matchMedia('(pointer:coarse)').matches;
@@ -800,32 +823,34 @@ function buildGraph(){
   const rp=+$('pref').value;adj=new Map();
   const blocked=new Set(),gates=new Set();
   for(const[id,t]of barriers){if(IMPASSABLE.has(t.barrier))blocked.add(id);else if(GATE.has(t.barrier))gates.add(id);}
-  const add=(u,v,c,d,w)=>{let l=adj.get(u);if(!l){l=[];adj.set(u,l);}l.push([v,c,d,w]);};
+  const add=(u,v,c,d,w,rd)=>{let l=adj.get(u);if(!l){l=[];adj.set(u,l);}l.push([v,c,d,w,rd]);};
+  const green=new Set();
   for(const w of ways.values()){
     if(!CATS[w.cat].route)continue;
-    const f=costFactor(w,rp),ow=w.cat==='road'?onewayDir(w.tags):0;
+    const f=costFactor(w,rp),rd=w.cat==='road'?1:(GREEN_CATS.has(w.cat)?0:2),ow=w.cat==='road'?onewayDir(w.tags):0;
+    if(rd===0)for(const n of w.nds)if(!blocked.has(n))green.add(n);
     for(let i=0;i<w.nds.length-1;i++){
       const a=w.nds[i],b=w.nds[i+1];if(blocked.has(a)||blocked.has(b))continue;
       const pa=nodes.get(a),pb=nodes.get(b);if(!pa||!pb)continue;
       const d=hav(pa,pb),c=d*f;
-      if(ow>=0)add(a,b,c+(gates.has(b)?150:0),d,w.id);
-      if(ow<=0)add(b,a,c+(gates.has(a)?150:0),d,w.id);
+      if(ow>=0)add(a,b,c+(gates.has(b)?150:0),d,w.id,rd);
+      if(ow<=0)add(b,a,c+(gates.has(a)?150:0),d,w.id,rd);
     }
   }
-  adj._gates=gates;graphDirty=false;
+  adj._gates=gates;adj._green=green;graphDirty=false;
 }
-function nearestNode(p,maxD){
+function nearestNode(p,maxD,onlyGreen){
   let best=null,bd=Infinity;const cl=Math.cos(p[0]*Math.PI/180);
-  for(const id of adj.keys()){const q=nodes.get(id);const dy=q[0]-p[0],dx=(q[1]-p[1])*cl;const d=dx*dx+dy*dy;if(d<bd){bd=d;best=id;}}
+  for(const id of (onlyGreen?adj._green:adj.keys())){if(!adj.has(id))continue;const q=nodes.get(id);const dy=q[0]-p[0],dx=(q[1]-p[1])*cl;const d=dx*dx+dy*dy;if(d<bd){bd=d;best=id;}}
   if(best===null)return null;return hav(nodes.get(best),p)<=(maxD||400)?best:null;
 }
-function astar(s,t,used){
+function astar(s,t,used,roadMul){
   if(s===t)return{path:[s],segs:[]};
   const tp=nodes.get(t),g=new Map([[s,0]]),prev=new Map(),h=new Heap(),closed=new Set();
   h.push(hav(nodes.get(s),tp),s);let it=0;
   while(h.size){const[,u]=h.pop();if(u===t)break;if(closed.has(u))continue;closed.add(u);if(++it>1500000)break;
     const gu=g.get(u),l=adj.get(u);if(!l)continue;
-    for(const[v,c,d,w]of l){const ng=gu+(used&&used.has(w)?c*3:c);const ov=g.get(v);if(ov===undefined||ng<ov){g.set(v,ng);prev.set(v,[u,w,d]);h.push(ng+hav(nodes.get(v),tp),v);}}}
+    for(const[v,c,d,w,rd]of l){const ng=gu+c*(used&&used.has(w)?3:1)*(roadMul&&rd?(rd===1?roadMul:1.5):1);const ov=g.get(v);if(ov===undefined||ng<ov){g.set(v,ng);prev.set(v,[u,w,d]);h.push(ng+hav(nodes.get(v),tp),v);}}}
   if(!prev.has(t))return null;
   const path=[t],segs=[];let x=t;
   while(x!==s){const[u,w,d]=prev.get(x);segs.push({w,d,n:x});path.push(u);x=u;}
@@ -834,36 +859,123 @@ function astar(s,t,used){
 function routeThrough(pts,loop,opt){
   opt=opt||{};if(graphDirty||!adj)buildGraph();
   const P=pts.slice();if(loop&&pts.length>1)P.push(pts[0]);
-  const sn=P.map(p=>nearestNode(p,opt.snapR));
-  const coords=[],legs=[],byCat={},used=opt.noReuse?new Set():null;let dist=0,gatesN=0;const fails=[];
+  const last=P.length-1;
+  const sn=P.map((p,i)=>nearestNode(p,opt.snapR,opt.green&&i>0&&!(loop&&i===last)));
+  const coords=[],legs=[],byCat={},steps=[],used=opt.noReuse?new Set():null;let dist=0,gatesN=0;const fails=[];
   for(let i=0;i<P.length-1;i++){
     const a=sn[i],b=sn[i+1];
-    const r=(a!==null&&b!==null)?astar(a,b,used):null;
+    const r=(a!==null&&b!==null)?astar(a,b,used,opt.roadMul):null;
     if(!r){fails.push(i);legs.push({fail:true,a:P[i],b:P[i+1]});continue;}
     const s0=Math.max(0,coords.length-1);
     for(const id of r.path){const p=nodes.get(id);if(!coords.length||coords[coords.length-1]!==p)coords.push(p);}
-    for(const s of r.segs){dist+=s.d;const c=ways.get(s.w).cat;byCat[c]=(byCat[c]||0)+s.d;if(adj._gates.has(s.n))gatesN++;if(used)used.add(s.w);}
+    r.segs.forEach((s,k)=>{dist+=s.d;const c=ways.get(s.w).cat;byCat[c]=(byCat[c]||0)+s.d;if(adj._gates.has(s.n))gatesN++;if(used)used.add(s.w);
+      steps.push({w:s.w,cat:c,d:s.d,na:r.path[k],a:nodes.get(r.path[k]),b:nodes.get(r.path[k+1]),gate:adj._gates.has(s.n)});});
     legs.push({s:s0,e:coords.length-1});
   }
-  let trail=0;for(const k in byCat)if(TRAIL_CATS.has(k))trail+=byCat[k];
-  return{coords,legs,dist,byCat,gatesN,fails,sn,trail};
+  let trail=0,green=0;for(const k in byCat){if(TRAIL_CATS.has(k))trail+=byCat[k];if(GREEN_CATS.has(k))green+=byCat[k];}
+  return{coords,legs,dist,byCat,gatesN,fails,sn,trail,green,steps};
+}
+
+/* ---------- Tronçons, entrées de chemin, feuille de route ---------- */
+const entryLayer=L.layerGroup().addTo(map),hlLayer=L.layerGroup().addTo(map);
+function brg(a,b){const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r),x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r);return(Math.atan2(y,x)/r+360)%360;}
+function alongPt(cs,d){let acc=0;for(let i=1;i<cs.length;i++){const s=hav(cs[i-1],cs[i]);if(acc+s>=d){const f=(d-acc)/s;return[cs[i-1][0]+(cs[i][0]-cs[i-1][0])*f,cs[i-1][1]+(cs[i][1]-cs[i-1][1])*f];}acc+=s;}return cs[cs.length-1];}
+function sameChemin(a,b){const ta=ways.get(a),tb=ways.get(b);if(!ta||!tb)return false;const na=ta.tags.name||ta.tags.ref,nb=tb.tags.name||tb.tags.ref;return !!na&&na===nb;}
+function buildTroncons(steps){
+  const out=[];let cur=null,acc=0,pw=null,ps=null;
+  for(const s of steps){
+    // nouveau tronçon : changement de type, ou on tourne sur un autre chemin à un carrefour
+    let turn=cur&&TRAIL_CATS.has(s.cat)&&s.w!==pw&&(adj.get(s.na)||[]).length>=3&&!sameChemin(pw,s.w);
+    if(turn&&ps){const dv=Math.abs(((brg(ps.a,ps.b)-brg(s.a,s.b))+540)%360-180);if(dv<30)turn=false;}
+    pw=s.w;ps=s;
+    if(!cur||cur.cat!==s.cat||turn){cur={cat:s.cat,coords:[s.a],d:0,km0:acc,ways:new Set(),names:new Set(),gates:0};out.push(cur);}
+    cur.coords.push(s.b);cur.d+=s.d;cur.ways.add(s.w);if(s.gate)cur.gates++;acc+=s.d;
+    const t=ways.get(s.w).tags,n=t.name||t.ref;if(n)cur.names.add(n);
+  }
+  let n=0;
+  out.forEach((t,i)=>{
+    t.start=t.coords[0];t.entry=TRAIL_CATS.has(t.cat);
+    const prev=out[i-1];
+    t.view=prev?alongPt(prev.coords.slice().reverse(),12):t.start;
+    t.head=Math.round(brg(t.view,alongPt(t.coords,30)));
+    if(t.entry)t.n=++n;
+  });
+  return out;
+}
+const entries=()=>lastRoute&&lastRoute.tr?lastRoute.tr.filter(t=>t.entry):[];
+function trStatus(t){let ok=0;for(const w of t.ways)if(notes[w]&&notes[w].s==='ok')ok++;return ok===t.ways.size?'ok':ok?'part':'';}
+function svURL(t){return`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${t.view[0].toFixed(6)},${t.view[1].toFixed(6)}&heading=${t.head}&pitch=-5&fov=80`;}
+function drawEntries(){
+  entryLayer.clearLayers();
+  entries().forEach((t,i)=>{
+    const st=trStatus(t);
+    L.marker(t.start,{zIndexOffset:500,icon:L.divIcon({className:'',html:`<div class="ent${st==='ok'?' ok':''}" style="--c:${CATS[t.cat].color}">${st==='ok'?'✓':t.n}</div>`,iconSize:[26,26],iconAnchor:[13,13]})})
+      .on('click',e=>{L.DomEvent.stopPropagation(e);openEntry(i);}).addTo(entryLayer);
+  });
+}
+function highlight(t){hlLayer.clearLayers();L.polyline(t.coords,{color:'#fff',weight:16,opacity:.35,interactive:false}).addTo(hlLayer);L.polyline(t.coords,{color:'#22d3ee',weight:5,dashArray:'2 9',interactive:false}).addTo(hlLayer);}
+function openEntry(i){
+  const E=entries();if(!E.length)return;i=Math.max(0,Math.min(E.length-1,i));const t=E[i],c=CATS[t.cat];
+  const w0=ways.get([...t.ways][0]),st=trStatus(t);
+  highlight(t);
+  if(map.getZoom()<16)map.setView(t.start,17);else map.panTo(t.start);
+  const node=el(`<div class="pill" style="background:${c.color};color:#0a1426">Entrée ${t.n}/${E.length}</div>
+    <div style="font-weight:800;font-size:16px">${esc(c.label)}${st==='ok'?' <span style="color:#22d3ee">✓ vérifié</span>':''}</div>
+    <div class="muted">${km(t.d)} · du km ${(t.km0/1000).toFixed(1).replace('.',',')} au km ${((t.km0+t.d)/1000).toFixed(1).replace('.',',')}${t.names.size?' · '+esc([...t.names].join(', ')):''}${t.gates?' · ⚠️ '+t.gates+' portail(s)':''}</div>
+    <div style="font-size:12.5px;margin-top:4px">${esc(w0?w0.reason:'')}</div>
+    <a class="sv" target="_blank" rel="noopener" href="${svURL(t)}"><svg class="ic"><use href="#i-cam"/></svg>Street View face à l'entrée</a>
+    <div class="links"><a target="_blank" rel="noopener" href="https://api.panoramax.xyz/#focus=map&map=19/${t.start[0].toFixed(6)}/${t.start[1].toFixed(6)}">Panoramax</a><a target="_blank" rel="noopener" href="https://www.mapillary.com/app/?lat=${t.start[0].toFixed(6)}&lng=${t.start[1].toFixed(6)}&z=18">Mapillary</a><a target="_blank" rel="noopener" href="https://www.geoportail.gouv.fr/carte?c=${t.start[1].toFixed(6)},${t.start[0].toFixed(6)}&z=18&l0=ORTHOIMAGERY.ORTHOPHOTOS::GEOPORTAIL:OGC:WMTS(1)&l1=CADASTRALPARCELS.PARCELLAIRE_EXPRESS::GEOPORTAIL:OGC:WMTS(1)&permalink=yes">Photo aérienne + cadastre</a></div>
+    <div class="links"><button class="g" data-a="ok">✓ Panneau OK, vérifié</button><button class="r" data-a="no">⛔ Interdit</button><button data-a="all">Voir le tronçon</button></div>
+    <div class="nav2"><button class="btn small" data-a="prev" ${i?'':'disabled'}>‹ Précédente</button><button class="btn small primary" data-a="next" ${i<E.length-1?'':'disabled'}>Suivante ›</button></div>`);
+  node.querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a;
+    if(a==='prev')return openEntry(i-1);
+    if(a==='next')return openEntry(i+1);
+    if(a==='all'){map.fitBounds(L.latLngBounds(t.coords).pad(0.25));return;}
+    for(const id of t.ways){notes[id]={s:a,n:a==='no'?'Signalé à l’entrée '+t.n:'',d:Date.now()};const w=ways.get(id);if(w){classifyWay(w);drawWay(w);}}
+    LS.set('pq_notes',notes);graphDirty=true;updateInfo();map.closePopup();computeRoute();
+    if(a==='ok'){toast('Entrée vérifiée ✓',1500);const E2=entries();if(E2.length)openEntry(Math.min(i+1,E2.length-1));}
+    else toast('Chemin marqué interdit : itinéraire recalculé sans lui.',3500);
+  });
+  L.popup({maxWidth:330,autoPanPadding:[20,80]}).setLatLng(t.start).setContent(node).openOn(map);
+}
+function renderRoadbook(){
+  const box=$('roadbook');const r=lastRoute;
+  if(!r||!r.tr||!r.tr.length){box.style.display='none';return;}
+  box.style.display='block';const E=entries(),okN=E.filter(t=>trStatus(t)==='ok').length;
+  $('rbSum').innerHTML=`<div class="rbsum"><span>${E.length} entrée(s) de chemin</span><span style="color:#22d3ee">${okN} vérifiée(s)</span><span>${r.tr.length} tronçons</span></div>`;
+  $('bCheck').style.display=E.length?'':'none';
+  const list=$('rbList');list.innerHTML='';
+  const MAX=12;let shown=0;
+  r.tr.forEach((t,idx)=>{
+    if(shown>=MAX&&!list.dataset.all){if(shown===MAX){const m=el(`<button class="btn small" style="width:100%;margin-top:8px">Afficher les ${r.tr.length-MAX} autres tronçons</button>`).firstChild;m.onclick=()=>{list.dataset.all=1;renderRoadbook();};list.appendChild(m);}shown++;return;}
+    shown++;
+    const c=CATS[t.cat],st=trStatus(t);
+    const row=el(`<div class="rb">${t.entry?`<div class="num" style="background:${c.color}">${st==='ok'?'✓':t.n}</div>`:`<div class="bar" style="background:${c.color}"></div>`}
+      <div class="tx"><b>${esc(c.label.replace(/ \(.*\)/,''))}${t.names.size?' · '+esc([...t.names][0]):''}</b><span>${km(t.d)} · km ${(t.km0/1000).toFixed(1).replace('.',',')}${t.gates?' · ⚠️ portail':''}</span></div>
+      <div class="acts">${t.entry?`<a target="_blank" rel="noopener" href="${svURL(t)}" title="Street View face à l'entrée"><svg class="ic"><use href="#i-cam"/></svg></a>`:''}<button title="Voir sur la carte"><svg class="ic"><use href="#i-eye"/></svg></button></div></div>`).firstChild;
+    row.querySelector('button').onclick=()=>{if(isTouch)collapse(true);if(t.entry)openEntry(E.indexOf(t));else{highlight(t);map.fitBounds(L.latLngBounds(t.coords).pad(0.3));}};
+    list.appendChild(row);
+  });
 }
 
 /* ---------- Itinéraire courant ---------- */
 let mode='explore',wps=[],lastRoute=null,routeTimer=null;
 function scheduleRoute(){clearTimeout(routeTimer);routeTimer=setTimeout(computeRoute,80);}
 function computeRoute(){
-  routeLayer.clearLayers();lastRoute=null;
+  routeLayer.clearLayers();entryLayer.clearLayers();hlLayer.clearLayers();lastRoute=null;$('roadbook').style.display='none';
   if(wps.length<2){showStats();saveDraft();return;}
   if(!ways.size){showStats('Les chemins ne sont pas encore chargés pour cette zone.');L.polyline(wps,{color:'#ff7a1a',weight:3,dashArray:'6 8'}).addTo(routeLayer);return;}
   const r=routeThrough(wps.map(ll2a),$('loop').checked,{noReuse:$('noReuse').checked});
   for(const lg of r.legs)if(lg.fail)L.polyline([lg.a,lg.b],{color:'#dc2626',weight:4,dashArray:'6 8',interactive:false}).addTo(routeLayer);
+  r.tr=buildTroncons(r.steps);
   if(r.coords.length>1){
-    L.polyline(r.coords,{color:'#fff',weight:10,opacity:.9,interactive:false}).addTo(routeLayer);
-    L.polyline(r.coords,{color:'#ff7a1a',weight:5.5,interactive:false}).addTo(routeLayer);
+    L.polyline(r.coords,{color:'#fff',weight:12,opacity:.95,interactive:false}).addTo(routeLayer);
+    L.polyline(r.coords,{color:'#ff7a1a',weight:8.5,interactive:false}).addTo(routeLayer);
+    for(const t of r.tr)L.polyline(t.coords,{color:CATS[t.cat].color,weight:3.5,interactive:false}).addTo(routeLayer);
     const cum=[0];for(let i=1;i<r.coords.length;i++)cum.push(cum[i-1]+hav(r.coords[i-1],r.coords[i]));r.cum=cum;
   }
-  lastRoute=r;showStats();saveDraft();
+  lastRoute=r;showStats();drawEntries();renderRoadbook();saveDraft();
 }
 function showStats(msg){
   const box=$('stats');
@@ -871,7 +983,7 @@ function showStats(msg){
   if(!lastRoute){box.innerHTML=`<div class="empty"><svg class="ic"><use href="#i-route"/></svg><span>${wps.length?'Encore un point et le tracé apparaît.':'Pas encore d’itinéraire. Génère une boucle ou passe en <b>Tracer</b>.'}</span></div>`;return;}
   const r=lastRoute,road=r.byCat.road||0,h=r.trail/1000/15+road/1000/40,pct=r.dist?Math.round(r.trail/r.dist*100):0;
   const ks=Object.keys(CATS).filter(k=>r.byCat[k]);
-  let s=`<div class="kpis"><div><span>Distance</span><b>${km(r.dist)}</b></div><div><span>Durée est.</span><b>${dur(h)}</b></div><div class="hl"><span>Chemins</span><b>${pct} %</b></div></div>
+  let s=`<div class="kpis"><div><span>Distance</span><b>${km(r.dist)}</b></div><div><span>Durée est.</span><b>${dur(h)}</b></div><div class="hl"><span>Chemins verts</span><b>${r.dist?Math.round(r.green/r.dist*100):0} %</b></div></div>
   <div class="mix">${ks.map(k=>`<i style="flex:${r.byCat[k]};background:${CATS[k].color}" title="${CATS[k].label}"></i>`).join('')}</div>
   <div class="mixleg">${ks.map(k=>`<span><i style="background:${CATS[k].color}"></i>${CATS[k].label.replace(/ \(.*\)/,'')} · ${km(r.byCat[k])}</span>`).join('')}</div>`;
   if(r.gatesN)s+=`<div class="note"><svg class="ic"><use href="#i-info"/></svg>${r.gatesN} portail(s) ou barrière(s) sur le trajet.</div>`;
@@ -934,25 +1046,28 @@ async function genLoop(again){
   await new Promise(r=>setTimeout(r,30));
   if(graphDirty||!adj)buildGraph();
   if(nearestNode(start,1500)===null){chip(null);toast('Aucun chemin autorisé près du point de départ.');$('bGen').disabled=false;return;}
-  let best=null,f=0.75;const t0=performance.now();
-  for(let k=0;k<16&&performance.now()-t0<6000;k++){
-    const th=genSeed+k*137.5,Rk=R*f,C=dest(start,th,Rk);
-    const pts=[start];for(const a of[90,180,270])pts.push(dest(C,th+180+a,Rk));
-    const r=routeThrough(pts,true,{snapR:1500,noReuse:true});
+  let best=null,f=0.8,tries=0;const t0=performance.now();
+  for(let k=0;k<45&&performance.now()-t0<9000;k++){
+    const nPts=3+(k%3),th=genSeed+k*137.5,Rk=R*f*(0.88+0.24*Math.random()),C=dest(start,th,Rk);
+    const pts=[start];for(let j=1;j<=nPts;j++)pts.push(dest(C,th+180+j*360/(nPts+1),Rk*(0.85+0.3*Math.random())));
+    const r=routeThrough(pts,true,{snapR:1300,noReuse:true,green:true,roadMul:3});
+    tries++;
     if(r.fails.length||r.dist<500)continue;
-    const score=r.trail/r.dist-1.6*Math.abs(r.dist-target)/target;
-    if(!best||score>best.score)best={score,r};
-    f=Math.max(0.3,Math.min(1.6,f*Math.pow(target/r.dist,0.8)));
-    if(k%3===2)await new Promise(r=>setTimeout(r,0));
+    const bad=((r.byCat.agri||0)+(r.byCat.dom||0)+(r.byCat.restr||0))/r.dist;
+    const score=2.6*r.green/r.dist-1.3*Math.abs(r.dist-target)/target-1.2*bad;
+    if(!best||score>best.score)best={score,r,n:nPts};
+    f=Math.max(0.3,Math.min(1.7,f*Math.pow(target/r.dist,0.7)));
+    if(k%2===1){chip(`Recherche de la boucle la plus verte… ${tries} essais`);await new Promise(r=>setTimeout(r,0));}
   }
   chip(null);$('bGen').disabled=false;
   if(!best){toast('Pas de boucle trouvée : réseau trop coupé ici. Essaie une autre distance ou un autre départ.',5000);return;}
-  wps=best.r.sn.slice(0,4).map(id=>L.latLng(nodes.get(id)));
+  wps=best.r.sn.slice(0,best.n+1).map(id=>L.latLng(nodes.get(id)));
   $('loop').checked=true;drawWps();computeRoute();
   $('bGen2').disabled=false;
   if(lastRoute&&lastRoute.coords.length)map.fitBounds(L.latLngBounds(lastRoute.coords).pad(0.08),{paddingBottomRight:isTouch?[0,0]:[400,0]});
-  toast(`Boucle de ${km(lastRoute.dist)} avec ${Math.round(lastRoute.trail/lastRoute.dist*100)} % de chemins. Déplace les points pour l'ajuster.`,5000);
+  toast(`Boucle de ${km(lastRoute.dist)}, ${Math.round(lastRoute.green/lastRoute.dist*100)} % de chemins verts, ${entries().length} entrées à contrôler (feuille de route).`,6000);
 }
+$('bCheck').onclick=()=>{if(isTouch)collapse(true);openEntry(0);};
 $('bGen').onclick=()=>genLoop(false);
 $('bGen2').onclick=()=>genLoop(true);
 
