@@ -11,6 +11,7 @@ import math
 import os
 import re
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -53,6 +54,7 @@ class Tiler:
     def __init__(self):
         self.tiles = defaultdict(list)
         self.counts = defaultdict(int)
+        self.tracks = {}  # chemins à vérifier au cadastre : id -> (élément, coordonnées)
 
     def add_way(self, wid, tags, node_ids, coords):
         if len(coords) < 2:
@@ -62,6 +64,14 @@ class Tiler:
         for k in {tile_key(a, b) for a, b in coords}:
             self.tiles[k].append(el)
         self.counts['ways'] += 1
+        if tags.get('highway') in ('track', 'unclassified', 'path', 'bridleway'):
+            self.tracks[wid] = (el, coords)
+
+    def apply_cadastre(self, result):
+        for wid, label in result.items():
+            if wid in self.tracks:
+                self.tracks[wid][0]['tags']['_cad'] = label
+                self.counts['cad_' + label] += 1
 
     def add_barrier(self, nid, tags, lat, lon):
         self.tiles[tile_key(lat, lon)].append({"type": "node", "id": nid, "lat": r7(lat), "lon": r7(lon), "tags": tags})
@@ -156,8 +166,23 @@ def main(pbf, outdir):
         if lines:
             tiler.add_forest({"type": "relation", "id": rid, "tags": t, "members": members}, lines)
 
+    depts = os.environ.get('CADASTRE_DEPTS', '').split()
+    bbox = os.environ.get('BBOX')  # ouest,sud,est,nord
+    if depts and bbox and tiler.tracks:
+        import cadastre
+        w, s_, e, n = map(float, bbox.split(','))
+        try:
+            com = cadastre.communes_in_bbox(depts, s_, w, n, e)
+            print(len(com), 'communes au cadastre')
+            paths = cadastre.download(com, os.environ.get('CADASTRE_CACHE', 'cadastre'))
+            polys = cadastre.load_parcels(paths)
+            print(len(polys), 'parcelles,', len(tiler.tracks), 'chemins à vérifier')
+            tiler.apply_cadastre(cadastre.classify({k: v[1] for k, v in tiler.tracks.items()}, polys))
+        except Exception as ex:  # le cadastre est un plus : on publie quand même sans lui
+            print('::warning::Vérification cadastre impossible :', repr(ex)[:300])
+
     keys, total = tiler.write(outdir)
-    print(f"{len(keys)} tuiles, {total / 1e6:.1f} Mo, {dict(tiler.counts)}")
+    print(f"::notice::{len(keys)} tuiles, {total / 1e6:.1f} Mo, {dict(tiler.counts)}")
     if not keys:
         sys.exit("Aucune donnée produite : vérifier l'extrait OSM")
 

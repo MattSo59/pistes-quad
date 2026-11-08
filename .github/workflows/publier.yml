@@ -29,7 +29,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q osmium-tool
-          pip install --quiet osmium
+          pip install --quiet osmium shapely numpy
 
       - name: Télécharger et découper la zone (Avesnois, Thiérache, Fagne)
         run: |
@@ -45,7 +45,11 @@ jobs:
           osmium tags-filter zone.pbf w/highway n/barrier wr/landuse=forest r/boundary=protected_area -o filtre.pbf
           ls -lh
 
-      - name: Construire les tuiles de données
+      - name: Construire les tuiles de données (+ vérification cadastre)
+        env:
+          BBOX: 3.55,49.70,4.55,50.35
+          CADASTRE_DEPTS: "59 02 08"
+          CADASTRE_CACHE: cadastre
         run: python3 tools/build_data.py osm/filtre.pbf site/data
 
       - uses: actions/configure-pages@v5
