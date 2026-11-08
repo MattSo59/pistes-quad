@@ -265,7 +265,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
 </div></div>
 <div id="welcome"><div class="w">
   <div class="art"><svg class="ic" id="wIc"><use href="#i-route"/></svg></div>
-  <div class="dots"><i class="on"></i><i></i><i></i></div>
+  <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
   <h2 id="wT"></h2><p id="wP"></p>
   <div class="row2"><button class="btn ghost" id="wSkip">Passer</button><button class="btn acc wide" id="wNext">Suivant</button></div>
 </div></div>
@@ -418,7 +418,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <span class="mob-only"><b>Installer :</b> Safari → Partager → « Sur l'écran d'accueil ».</span>
       <span class="pc-only"><b>Installer sur PC :</b> Chrome/Edge → icône d'installation dans la barre d'adresse.</span>
       </div>
-      <div class="btns"><button class="btn small" id="bTour">Revoir la présentation</button></div>
+      <div class="btns"><a class="btn small primary" href="guide.pdf" target="_blank" rel="noopener" style="text-decoration:none">📄 Guide PDF (2 pages)</a><button class="btn small" id="bTour">Revoir la présentation</button></div>
     </section>
     <section class="card"><div class="card-h"><svg class="ic"><use href="#i-key"/></svg>Légende</div><div id="legend"></div></section>
     <div class="warn"><b>Les couleurs viennent d'OpenStreetMap, pas d'une source officielle.</b> Un chemin vert peut être interdit par un arrêté municipal ou un panneau non cartographié. Le panneau sur place fait toujours foi.</div>
@@ -444,7 +444,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v6</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v6.1</div>
   </div>
 
   </div>
@@ -1472,15 +1472,17 @@ $('bLayers').onclick=()=>showPane('pLayers');
     setTimeout(()=>map.invalidateSize(),300);});
   h.addEventListener('click',()=>{if(!isTouch)collapse(!$('panel').classList.contains('collapsed'));});})();
 const TOUR=[
-  ['i-route','Bienvenue sur Pistes Quad','Trouve un maximum de chemins autorisés aux quads et SSV autour de chez toi, avec des cartes IGN et les données OpenStreetMap de l’Avesnois intégrées.'],
-  ['i-key','Les couleurs des chemins','<b style="color:#16a34a">Vert</b> : accès autorisé indiqué · <b style="color:#a3e635">vert clair</b> : rien d’interdit connu · <b style="color:#facc15">jaune</b> : agricole · <b style="color:#c084fc">violet</b> : forêt ONF · <b style="color:#ef4444">rouge</b> : interdit. Touche un chemin pour voir ses photos.'],
-  ['i-wand','Ta première boucle','Choisis une distance dans <b>Tracé</b> puis <b>Générer ma boucle</b>. Ou passe en <b style="color:#ff7a1a">Tracer</b> et pose tes points. Le jour J, l’onglet <b>Balade</b> te suit au GPS.']];
+  ['i-route','Bienvenue sur Pistes Quad','Un maximum de chemins autorisés aux quads et SSV autour de Fourmies, vérifiés avec OpenStreetMap et le cadastre. 5 écrans, 30 secondes.'],
+  ['i-key','Lis les couleurs','<b style="color:#22d3ee">Cyan</b> vérifié par toi · <b style="color:#16a34a">vert</b> ouvert ou chemin rural au cadastre · <b style="color:#a3e635">vert clair</b> à vérifier · <b style="color:#facc15">jaune</b> agricole · <b style="color:#c084fc">violet</b> forêt ONF · <b style="color:#fb7185">rose</b> privé probable · <b style="color:#ef4444">rouge</b> interdit.'],
+  ['i-wand','Crée ta boucle','<b>Tracé</b> → choisis 15, 25, 40 ou 60 km → <b style="color:#ff7a1a">Générer ma boucle</b>. Elle prend le plus de vert possible. Ou passe en <b>Tracer</b> et touche la carte.'],
+  ['i-cam','Contrôle chaque virage','Un point 📷 à chaque virage et entrée de chemin. <b>Contrôler les virages</b> : Street View s’ouvre face au chemin, réponds <b style="color:#22c55e">✓ OK</b> ou <b style="color:#ef4444">⛔ Interdit</b>, le tracé s’adapte.'],
+  ['i-ride','Roule !','<b>Garder</b> pour enregistrer, <b>Balade</b> pour le GPS et l’alerte hors tracé, <b>GPX</b> pour OsmAnd ou CarPlay.<br><br><b>Le panneau sur place fait toujours foi.</b> Guide complet : Aide → Guide PDF.']];
 let tourI=0;
 function tour(i){tourI=i;const w=$('welcome');w.style.display='flex';const t=TOUR[i];
   $('wIc').innerHTML=`<use href="#${t[0]}"/>`;$('wT').textContent=t[1];$('wP').innerHTML=t[2];
   w.querySelectorAll('.dots i').forEach((d,k)=>d.classList.toggle('on',k===i));
   $('wNext').textContent=i<TOUR.length-1?'Suivant':'C’est parti !';}
-function endTour(){$('welcome').style.display='none';LS.set('pq_seen4',true);}
+function endTour(){$('welcome').style.display='none';LS.set('pq_seen6',true);}
 $('wNext').onclick=()=>tourI<TOUR.length-1?tour(tourI+1):endTour();
 $('wSkip').onclick=endTour;
 $('bTour').onclick=()=>tour(0);
@@ -1513,7 +1515,7 @@ document.addEventListener('keydown',e=>{
   const r=LS.get('pq_ride',null);
   if(r&&r.pts&&r.pts.length&&Date.now()-r.t0<12*3600e3){toast('Balade en cours récupérée.',3000);startRide(r);showPane('pRide');}
   autoLoad();
-  if(!LS.get('pq_seen4',false))setTimeout(()=>tour(0),500);
+  if(!LS.get('pq_seen6',false))setTimeout(()=>tour(0),500);
   if('serviceWorker'in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
   if(location.protocol==='file:')setTimeout(()=>toast('Ouvert depuis un fichier : tout marche sauf le hors-ligne et parfois le GPS. Mets-le en ligne pour en profiter à 100 %.',6000),7000);
 })();
