@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""Construit les tuiles de données de l'appli Pistes Quad à partir d'un extrait OSM (.pbf).
+
+Usage : build_data.py zone-filtree.osm.pbf site/data
+
+Produit site/data/<i>_<j>.json (même format que les réponses Overpass utilisées par l'appli)
+et site/data/index.json. La grille (0,08° x 0,12°) est identique à celle de index.html.
+"""
+import json
+import math
+import os
+import re
+import sys
+from collections import defaultdict
+from datetime import datetime, timezone
+
+TLAT, TLON = 0.08, 0.12
+HIGHWAY = re.compile(r'^(track|unclassified|tertiary|tertiary_link|secondary|secondary_link|primary|primary_link'
+                     r'|residential|living_street|road|path|bridleway|trunk|trunk_link|motorway)$')
+DOM = re.compile(r'domaniale', re.I)
+ONF = re.compile(r'ONF|Office national des for', re.I)
+
+
+def tile_key(lat, lon):
+    return f"{math.floor(lat / TLAT)}_{math.floor(lon / TLON)}"
+
+
+def tiles_for_box(s, w, n, e):
+    out = []
+    for i in range(math.floor(s / TLAT), math.floor(n / TLAT) + 1):
+        for j in range(math.floor(w / TLON), math.floor(e / TLON) + 1):
+            out.append(f"{i}_{j}")
+    return out
+
+
+def is_forest(t):
+    if 'highway' in t:
+        return False
+    if t.get('landuse') == 'forest' and (DOM.search(t.get('name', '')) or ONF.search(t.get('operator', ''))):
+        return True
+    if t.get('boundary') == 'protected_area' and DOM.search(t.get('name', '')):
+        return True
+    return False
+
+
+def r7(x):
+    return round(x, 7)
+
+
+class Tiler:
+    """Répartit les éléments dans les tuiles (logique indépendante d'osmium, testable)."""
+
+    def __init__(self):
+        self.tiles = defaultdict(list)
+        self.counts = defaultdict(int)
+
+    def add_way(self, wid, tags, node_ids, coords):
+        if len(coords) < 2:
+            return
+        el = {"type": "way", "id": wid, "tags": tags, "nodes": node_ids,
+              "geometry": [{"lat": r7(a), "lon": r7(b)} for a, b in coords]}
+        for k in {tile_key(a, b) for a, b in coords}:
+            self.tiles[k].append(el)
+        self.counts['ways'] += 1
+
+    def add_barrier(self, nid, tags, lat, lon):
+        self.tiles[tile_key(lat, lon)].append({"type": "node", "id": nid, "lat": r7(lat), "lon": r7(lon), "tags": tags})
+        self.counts['barriers'] += 1
+
+    def add_forest(self, el, lines):
+        pts = [p for l in lines for p in l]
+        if not pts:
+            return
+        s, n = min(p[0] for p in pts), max(p[0] for p in pts)
+        w, e = min(p[1] for p in pts), max(p[1] for p in pts)
+        for k in tiles_for_box(s, w, n, e):
+            self.tiles[k].append(el)
+        self.counts['forests'] += 1
+
+    def write(self, outdir, bbox_keys=None):
+        os.makedirs(outdir, exist_ok=True)
+        keys = sorted(k for k in self.tiles if bbox_keys is None or k in bbox_keys)
+        total = 0
+        for k in keys:
+            path = os.path.join(outdir, k + '.json')
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump({"elements": self.tiles[k]}, f, ensure_ascii=False, separators=(',', ':'))
+            total += os.path.getsize(path)
+        idx = {"date": datetime.now(timezone.utc).isoformat(timespec='seconds'), "keys": keys,
+               "source": "© contributeurs OpenStreetMap, ODbL", "counts": dict(self.counts)}
+        with open(os.path.join(outdir, 'index.json'), 'w', encoding='utf-8') as f:
+            json.dump(idx, f, ensure_ascii=False)
+        return keys, total
+
+
+def main(pbf, outdir):
+    import osmium  # pyosmium
+
+    # Passe 1 : relations « forêt domaniale » et ways membres à récupérer
+    class RelPass(osmium.SimpleHandler):
+        def __init__(self):
+            super().__init__()
+            self.rels = []
+            self.need = set()
+
+        def relation(self, r):
+            t = {x.k: x.v for x in r.tags}
+            if is_forest(t):
+                mem = [(m.ref, m.role) for m in r.members if m.type == 'w']
+                self.rels.append((r.id, t, mem))
+                self.need.update(ref for ref, _ in mem)
+
+    rp = RelPass()
+    rp.apply_file(pbf)
+
+    tiler = Tiler()
+
+    # Passe 2 : chemins, barrières, forêts (avec coordonnées)
+    class MainPass(osmium.SimpleHandler):
+        def __init__(self):
+            super().__init__()
+            self.member_geom = {}
+
+        def node(self, n):
+            if 'barrier' in n.tags and n.location.valid():
+                tiler.add_barrier(n.id, {x.k: x.v for x in n.tags}, n.location.lat, n.location.lon)
+
+        def way(self, w):
+            ids, coords = [], []
+            for nd in w.nodes:
+                if nd.location.valid():
+                    ids.append(nd.ref)
+                    coords.append((nd.location.lat, nd.location.lon))
+            if w.id in rp.need:
+                self.member_geom[w.id] = coords
+            hw = w.tags.get('highway')
+            if hw and HIGHWAY.match(hw):
+                tiler.add_way(w.id, {x.k: x.v for x in w.tags}, ids, coords)
+                return
+            t = {x.k: x.v for x in w.tags}
+            if is_forest(t) and len(coords) > 2:
+                tiler.add_forest({"type": "way", "id": w.id, "tags": t,
+                                  "geometry": [{"lat": r7(a), "lon": r7(b)} for a, b in coords]}, [coords])
+
+    mp = MainPass()
+    mp.apply_file(pbf, locations=True)
+
+    for rid, t, mem in rp.rels:
+        members, lines = [], []
+        for ref, role in mem:
+            g = mp.member_geom.get(ref)
+            if g and len(g) > 1:
+                members.append({"type": "way", "ref": ref, "role": role,
+                                "geometry": [{"lat": r7(a), "lon": r7(b)} for a, b in g]})
+                lines.append(g)
+        if lines:
+            tiler.add_forest({"type": "relation", "id": rid, "tags": t, "members": members}, lines)
+
+    keys, total = tiler.write(outdir)
+    print(f"{len(keys)} tuiles, {total / 1e6:.1f} Mo, {dict(tiler.counts)}")
+    if not keys:
+        sys.exit("Aucune donnée produite : vérifier l'extrait OSM")
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        sys.exit(__doc__)
+    main(sys.argv[1], sys.argv[2])

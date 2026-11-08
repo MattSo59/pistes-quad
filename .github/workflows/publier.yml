@@ -1,0 +1,56 @@
+name: Données et publication
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 1 * *'   # le 1er de chaque mois : données OSM fraîches
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Outils OSM
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q osmium-tool
+          pip install --quiet osmium
+
+      - name: Télécharger et découper la zone (Avesnois, Thiérache, Fagne)
+        run: |
+          mkdir -p osm && cd osm
+          # sud, ouest, nord, est -> osmium attend ouest,sud,est,nord
+          BBOX=3.55,49.70,4.55,50.35
+          for r in nord-pas-de-calais picardie champagne-ardenne; do
+            curl -sSfL --retry 3 -o "$r.pbf" "https://download.geofabrik.de/europe/france/$r-latest.osm.pbf"
+            osmium extract -b "$BBOX" -s complete_ways "$r.pbf" -o "$r-zone.pbf"
+            rm "$r.pbf"
+          done
+          osmium merge *-zone.pbf -o zone.pbf
+          osmium tags-filter zone.pbf w/highway n/barrier wr/landuse=forest r/boundary=protected_area -o filtre.pbf
+          ls -lh
+
+      - name: Construire les tuiles de données
+        run: python3 tools/build_data.py osm/filtre.pbf site/data
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploiement
+        uses: actions/deploy-pages@v4

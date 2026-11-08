@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pistes Quad">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Pistes Quad & SSV</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#111827;--fg:#f9fafb;--muted:#9ca3af;--card:#1f2937;--line:#374151;--acc:#e11d8f;--ok:#16a34a;--st:env(safe-area-inset-top);--sb:env(safe-area-inset-bottom)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+#map{position:fixed;inset:0;background:#0b1220}
+button{font-family:inherit}
+#top{position:fixed;top:calc(8px + var(--st));left:8px;z-index:1000;display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-width:calc(100vw - 16px)}
+.btn{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px #0006;white-space:nowrap}
+.btn:active{transform:scale(.97)}.btn:disabled{opacity:.5}
+.btn.primary{background:var(--ok);border-color:var(--ok)}.btn.acc{background:var(--acc);border-color:var(--acc)}
+.btn.small{padding:7px 10px;font-size:13px}.btn.ico{padding:9px 11px}
+.btn.on{background:#2563eb;border-color:#2563eb}
+.seg{display:flex;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px #0006;border:1px solid var(--line)}
+.seg button{border:0;background:var(--card);color:var(--muted);padding:9px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.seg button.on{background:var(--acc);color:#fff}
+#chip{background:#000b;border-radius:999px;padding:6px 10px;font-size:12px;color:#d1d5db;display:none}
+#searchBox{position:fixed;top:calc(56px + var(--st));left:8px;z-index:1001;width:min(420px,calc(100vw - 16px));display:none}
+#searchBox input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:#fff;font-size:16px}
+#searchRes .r{background:var(--card);padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(60px + var(--st));z-index:1100;background:#000d;padding:9px 14px;border-radius:10px;font-size:14px;display:none;max-width:92vw;text-align:center;cursor:pointer}
+#hud{position:fixed;left:50%;transform:translateX(-50%);top:calc(58px + var(--st));z-index:999;background:#000d;border-radius:12px;padding:6px 12px;display:none;gap:14px;font-size:13px;text-align:center}
+#hud b{display:block;font-size:20px}
+#offBanner{position:fixed;left:0;right:0;top:0;z-index:1200;background:#dc2626;color:#fff;font-weight:700;text-align:center;padding:calc(8px + var(--st)) 8px 8px;display:none}
+#panel{position:fixed;z-index:1000;background:var(--bg);border:1px solid var(--line);display:flex;flex-direction:column;box-shadow:0 -4px 20px #0008}
+@media (max-width:760px){
+  #panel{left:0;right:0;bottom:0;height:min(52vh,460px);border-radius:16px 16px 0 0;padding-bottom:var(--sb);transition:height .2s}
+  #panel.collapsed{height:calc(54px + var(--sb))}#panel.full{height:calc(88vh - var(--st))}
+  .leaflet-bottom.leaflet-left{bottom:calc(54px + var(--sb))}
+  body.pOpen .leaflet-bottom.leaflet-left{bottom:min(52vh,460px)}
+  .pc-only{display:none!important}
+}
+@media (min-width:761px){#panel{top:10px;right:10px;bottom:10px;width:390px;border-radius:14px}#panel.collapsed{bottom:auto;height:56px}#top{max-width:calc(100vw - 420px)}.mob-only{display:none!important}}
+#grip{display:flex;align-items:center;gap:2px;padding:6px 6px;border-bottom:1px solid var(--line);flex:0 0 auto}
+#grip .tab{flex:1;background:none;border:0;color:var(--muted);font-weight:700;font-size:12.5px;padding:8px 2px;border-radius:8px;cursor:pointer;white-space:nowrap}
+#grip .tab.on{color:#fff;background:var(--line)}
+#toggle{background:none;border:0;color:var(--muted);font-size:18px;padding:4px 8px;cursor:pointer}
+#body{overflow:auto;padding:10px 12px 18px;font-size:14px;line-height:1.4;flex:1;-webkit-overflow-scrolling:touch}
+.pane{display:none}.pane.on{display:block}
+h3{margin:14px 0 6px;font-size:14px;color:#e5e7eb}h3:first-child{margin-top:2px}
+label.row{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
+label.row input{width:18px;height:18px;flex:0 0 auto}
+.sw{display:inline-block;width:26px;height:0;border-top:4px solid;vertical-align:middle;flex:0 0 auto}
+.muted{color:var(--muted);font-size:12.5px}
+.warn{background:#78350f55;border:1px solid #b45309;border-radius:8px;padding:8px;font-size:12.5px;margin:6px 0}
+.info{background:#1e3a8a44;border:1px solid #1d4ed8;border-radius:8px;padding:8px;font-size:12.5px;margin:6px 0}
+.stats{background:var(--card);border-radius:10px;padding:8px 10px;margin:8px 0}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.item{background:var(--card);border-radius:10px;padding:8px 10px;margin:6px 0}
+.item .t{font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.big{font-size:22px;font-weight:800}
+input[type=range]{width:100%}
+input[type=text],textarea{width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:#0b1220;color:#fff;font-size:16px;font-family:inherit}
+.leaflet-popup-content{font-size:13px;min-width:230px;margin:10px 12px}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#1f2937;color:#f9fafb}
+.leaflet-container a.leaflet-popup-close-button{color:#9ca3af}
+.links{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.links a,.links button{background:#374151;color:#fff!important;text-decoration:none;padding:6px 9px;border-radius:7px;font-size:12px;border:0;cursor:pointer}
+.links .g{background:#0e7490}.links .r{background:#991b1b}
+table.tags{border-collapse:collapse;margin-top:4px}table.tags td{padding:1px 8px 1px 0;font-size:12px;vertical-align:top}table.tags td:first-child{color:#9ca3af}
+.wp{background:var(--acc);color:#fff;border:2px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;box-shadow:0 1px 4px #0008}
+.me{width:22px;height:22px;position:relative}
+.me .dot{position:absolute;inset:3px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 6px #2563eb44}
+.me .arr{position:absolute;left:50%;top:-9px;margin-left:-6px;border:6px solid transparent;border-bottom:10px solid #2563eb;display:none}
+#profile svg{width:100%;height:110px;background:var(--card);border-radius:8px;display:block}
+.leaflet-container.trace{cursor:crosshair}
+kbd{background:#374151;border-radius:4px;padding:1px 5px;font-size:12px}
+.prog{height:6px;background:#374151;border-radius:3px;overflow:hidden;margin:6px 0}.prog div{height:100%;background:var(--ok);width:0}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="offBanner">⚠️ Tu sors de l'itinéraire</div>
+
+<div id="top">
+  <div class="seg"><button id="mExplore" class="on" title="Explorer (E)">🔎 Explorer</button><button id="mTrace" title="Tracer (T)">✏️ Tracer</button></div>
+  <button class="btn ico" id="bSearch" title="Rechercher une commune (F)">🔍</button>
+  <button class="btn ico" id="bGps" title="Ma position (G)">📍</button>
+  <button class="btn ico" id="bLoad" title="Charger / rafraîchir les chemins de la zone (L)">⬇︎</button>
+  <span id="chip"></span>
+</div>
+<div id="searchBox"><input type="text" id="q" placeholder="Commune, lieu-dit, adresse…" autocomplete="off"><div id="searchRes"></div></div>
+<div id="toast"></div>
+<div id="hud"><div><b id="hSpd">0</b>km/h</div><div><b id="hDist">0,0</b>km faits</div><div id="hRemW"><b id="hRem">–</b>km restants</div></div>
+
+<div id="panel">
+  <div id="grip">
+    <button class="tab on" data-p="pRoute">🧭 Tracé</button>
+    <button class="tab" data-p="pRide">🏍 Balade</button>
+    <button class="tab" data-p="pLayers">🗺 Carte</button>
+    <button class="tab" data-p="pSaved">💾 Mes tracés</button>
+    <button class="tab" data-p="pHelp">❓ Aide</button>
+    <button id="toggle" title="Réduire / agrandir">▾</button>
+  </div>
+  <div id="body">
+
+  <!-- ============ TRACÉ ============ -->
+  <div class="pane on" id="pRoute">
+    <div id="loadErr"></div>
+    <h3>🔄 Boucle automatique</h3>
+    <div class="muted">Génère une boucle qui maximise les chemins autorisés, au départ du point D, de ta position ou du centre de la carte.</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px"><input type="range" id="loopKm" min="10" max="80" step="5" value="30"><span id="loopKmV" class="big" style="min-width:76px;text-align:right">30 km</span></div>
+    <div class="btns"><button class="btn small primary" id="bGen">Proposer une boucle</button><button class="btn small" id="bGen2" disabled>Autre proposition</button></div>
+
+    <h3>✏️ Tracé à la main</h3>
+    <div class="muted">Mode <b>Tracer</b> puis touche la carte. <span class="mob-only">Un appui long ajoute aussi un point.</span><span class="pc-only">Clic droit = ajouter un point dans n'importe quel mode.</span> Un point posé près du tracé s'insère dedans. Les points se déplacent au doigt / à la souris.</div>
+    <div class="btns">
+      <button class="btn small" id="bUndo">↶ Dernier point</button>
+      <button class="btn small" id="bClear">✕ Effacer</button>
+      <button class="btn small" id="bRev">⇄ Inverser</button>
+    </div>
+    <label class="row"><input type="checkbox" id="loop"> Boucle (retour au départ)</label>
+    <label class="row"><input type="checkbox" id="noReuse" checked> Éviter de repasser par les mêmes chemins</label>
+
+    <div class="stats" id="stats">Aucun itinéraire.</div>
+    <div class="btns">
+      <button class="btn small acc" id="bSave">💾 Enregistrer</button>
+      <button class="btn small" id="bGpx">GPX / OsmAnd</button>
+      <button class="btn small" id="bLink">🔗 Envoyer</button>
+      <button class="btn small" id="bElev">⛰ Profil</button>
+    </div>
+    <div id="saveBox"></div>
+    <div id="profile"></div>
+
+    <h3>Le tracé peut emprunter</h3>
+    <div id="routeCats"></div>
+    <h3>Préférence</h3>
+    <input type="range" id="pref" min="0" max="4" step="0.5" value="2">
+    <div class="muted" style="display:flex;justify-content:space-between"><span>Plus court</span><span>Max de chemins</span></div>
+  </div>
+
+  <!-- ============ BALADE ============ -->
+  <div class="pane" id="pRide">
+    <div class="btns"><button class="btn primary" id="bRide" style="flex:1;font-size:16px;padding:12px">▶ Démarrer la balade</button></div>
+    <div class="grid2">
+      <div class="stats"><div class="muted">Distance</div><div class="big" id="rDist">0,0 km</div></div>
+      <div class="stats"><div class="muted">Durée</div><div class="big" id="rTime">0:00</div></div>
+      <div class="stats"><div class="muted">Vitesse moy.</div><div class="big" id="rAvg">–</div></div>
+      <div class="stats"><div class="muted">Reste (itinéraire)</div><div class="big" id="rRem">–</div></div>
+    </div>
+    <label class="row"><input type="checkbox" id="follow" checked> Suivre ma position sur la carte</label>
+    <label class="row"><input type="checkbox" id="wake" checked> Garder l'écran allumé</label>
+    <label class="row"><input type="checkbox" id="offAlert" checked> Alerte si je sors de l'itinéraire</label>
+    <div class="info"><b>🚙 CarPlay (iPhone)</b> : Apple n'autorise sur CarPlay que des applis natives validées, donc aucune appli web, celle-ci comprise. Pour avoir ton tracé sur l'écran CarPlay :<br>
+    1. Installe <b>OsmAnd</b> (gratuit, compatible CarPlay).<br>
+    2. Ici : <b>🧭 Tracé → GPX / OsmAnd</b> → choisis OsmAnd dans le menu de partage.<br>
+    3. Dans OsmAnd : Navigation → Paramètres → <b>Suivre la trace</b>. Choisis le mode « trace d'origine » pour qu'il ne recalcule pas par les routes.<br>
+    4. Branche l'iPhone : le guidage s'affiche sur CarPlay.</div>
+    <div class="btns"><button class="btn small" id="bOsmand">📤 Envoyer l'itinéraire vers OsmAnd / CarPlay</button></div>
+    <div class="info">La balade enregistre ta trace (sauvegardée au fil de l'eau). <b>Limite d'un site web :</b> si tu verrouilles le téléphone ou changes d'appli, le GPS s'arrête et la trace reprend au retour. Pour enregistrer écran éteint, exporte le GPX vers OsmAnd ou ton GPS de guidon. La vibration d'alerte ne marche pas sur iPhone (bandeau rouge à la place).</div>
+  </div>
+
+  <!-- ============ CARTE ============ -->
+  <div class="pane" id="pLayers">
+    <h3>Fond de carte</h3>
+    <div id="bases"></div>
+    <label class="row"><input type="checkbox" id="cadastre"> Cadastre (repérer les chemins ruraux)</label>
+    <h3>Chemins affichés</h3>
+    <div id="dispCats"></div>
+    <label class="row"><input type="checkbox" id="showBarriers" checked> Barrières / plots (🔴 infranchissable, 🟠 portail)</label>
+    <label class="row"><input type="checkbox" id="showForests" checked> Contours forêts domaniales (ONF)</label>
+    <label class="row"><input type="checkbox" id="showAreas"> Zones de données chargées</label>
+    <h3>Données des chemins</h3>
+    <label class="row"><input type="checkbox" id="autoLoad" checked> Charger automatiquement en me déplaçant sur la carte</label>
+    <div class="muted" id="dataInfo">Aucune donnée chargée.</div>
+    <div class="muted" style="margin-top:6px">Serveur Overpass personnalisé (facultatif, sinon automatique) :</div>
+    <input type="text" id="srv" placeholder="https://…/api/interpreter" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="btns"><button class="btn small" id="bFourmies">Zone Fourmies (~25 km)</button><button class="btn small" id="bRefresh">↻ Rafraîchir la zone</button></div>
+    <h3>Hors-ligne</h3>
+    <div class="muted">Les chemins chargés et les cartes déjà vues restent en mémoire sur l'appareil. Pour partir sans réseau, enregistre le fond IGN de la zone affichée (zooms 12 à 16).</div>
+    <div class="btns"><button class="btn small" id="bOffline">📥 Enregistrer la carte de la zone</button><button class="btn small" id="bWipe">🗑 Vider le cache</button></div>
+    <div id="offProg"></div>
+    <div class="pc-only"><h3>Raccourcis clavier</h3><div class="muted"><kbd>E</kbd> explorer · <kbd>T</kbd> tracer · <kbd>Z</kbd> annuler le dernier point · <kbd>F</kbd> rechercher · <kbd>G</kbd> ma position · <kbd>L</kbd> charger la zone · <kbd>B</kbd> boucle auto · <kbd>Échap</kbd> fermer</div></div>
+  </div>
+
+  <!-- ============ MES TRACÉS ============ -->
+  <div class="pane" id="pSaved">
+    <h3>Itinéraires et sorties</h3>
+    <div id="savedList" class="muted">Rien d'enregistré pour l'instant.</div>
+    <h3>Chemins que j'ai notés</h3>
+    <div class="muted" id="notesInfo"></div>
+    <h3>Passer du PC au téléphone (et inversement)</h3>
+    <div class="muted">Chaque appareil garde ses données. Pour tout transférer : <b>Exporter</b> sur l'un, <b>Importer</b> sur l'autre. Pour un seul itinéraire, utilise <b>🔗 Envoyer</b> (lien).</div>
+    <div class="btns"><button class="btn small" id="bExport">⬆︎ Exporter mes données</button><label class="btn small" style="display:inline-block">⬇︎ Importer<input type="file" id="jsonIn" accept=".json,application/json" style="display:none"></label></div>
+    <h3>Importer un GPX</h3>
+    <input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml">
+    <div class="muted">Affiche la trace d'un pote pour la comparer au réseau autorisé.</div>
+    <div class="btns"><button class="btn small" id="bClearImp">Masquer les GPX importés</button></div>
+  </div>
+
+  <!-- ============ AIDE ============ -->
+  <div class="pane" id="pHelp">
+    <h3>🩺 Ça ne charge pas ?</h3>
+    <div class="muted">Teste la connexion aux serveurs et envoie-moi une capture du résultat.</div>
+    <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
+    <div id="diag"></div>
+    <h3>Démarrage rapide</h3>
+    <div class="muted">
+    1. Déplace la carte sur ta zone : les chemins se chargent tout seuls (zoom 12+).<br>
+    2. <b>🧭 Tracé → Proposer une boucle</b>, ou passe en <b>Tracer</b> et pose tes points.<br>
+    3. Touche un chemin en mode <b>Explorer</b> pour voir son statut et ses photos (Street View, Panoramax…), et le noter « ✓ vérifié » ou « ⛔ interdit ».<br>
+    4. <b>🏍 Balade</b> le jour J : GPS, suivi, alerte hors tracé, enregistrement.<br>
+    5. <b>CarPlay</b> : passe par OsmAnd (explications dans l'onglet 🏍 Balade).<br>
+    <span class="mob-only"><b>Installer sur le téléphone :</b> iPhone → Safari → Partager → « Sur l'écran d'accueil ». Android → Chrome → ⋮ → « Installer l'application ».</span>
+    <span class="pc-only"><b>Installer sur PC :</b> Chrome/Edge → icône d'installation dans la barre d'adresse.</span>
+    </div>
+    <h3>Légende</h3><div id="legend"></div>
+    <div class="warn"><b>Les couleurs viennent d'OpenStreetMap, pas d'une source officielle.</b> Un chemin vert peut être interdit par un arrêté municipal ou un panneau non cartographié. Le panneau sur place fait toujours foi.</div>
+    <h3>Ce que dit la loi (France)</h3>
+    <div class="muted">
+    • <b>Autorisé</b> (art. L362-1 Code de l'environnement) : routes publiques, <b>chemins ruraux</b> (communaux) et voies privées ouvertes à la circulation. Le hors-piste est interdit.<br>
+    • <b>Le maire ou le préfet peut interdire</b> un chemin ou un secteur : panneau rond B0 (tous véhicules), B7b (véhicules à moteur), B7a (automobiles, donc quads et SSV aussi).<br>
+    • <b>Chemins d'exploitation</b> : privés, réservés aux riverains. Souvent impossibles à distinguer d'un chemin rural sur le terrain.<br>
+    • <b>Forêts domaniales (ONF)</b> : routes forestières privées de l'État, en général fermées aux véhicules à moteur sauf panneau contraire (en violet).<br>
+    • <b>« Sauf véhicules agricoles »</b> : prévu pour l'activité agricole. Un quad homologué tracteur (T3) en balade n'est à mon avis <b>pas</b> couvert. C'est discutable : renseigne-toi en mairie avant.<br>
+    • Engin <b>homologué, immatriculé, assuré</b>, permis adapté, code de la route applicable sur les chemins.<br>
+    • <b>Belgique</b> (frontière à quelques km) : règles différentes, nettement plus restrictives, notamment en forêt wallonne. Non gérées ici.
+    </div>
+    <h3>Repérer un chemin rural</h3>
+    <div class="muted">Active le <b>cadastre</b> (onglet Carte) : un chemin rural est une bande <b>sans numéro de parcelle</b> entre les parcelles. Un chemin qui a son propre numéro est probablement privé. La mairie peut te montrer le tableau des chemins ruraux et les arrêtés de circulation.</div>
+    <h3>Améliorer les données</h3>
+    <div class="muted">Un panneau qui ne correspond pas à la carte ? Note-le dans l'appli (⛔), et corrige OpenStreetMap via le lien « Corriger » (tag <code>motor_vehicle</code>). Toute la communauté en profite.</div>
+    <div class="muted" style="margin-top:12px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v3</div>
+  </div>
+
+  </div>
+</div>
+
+<script>
+"use strict";
+/* capture des blocages par la politique de sécurité de l'hébergeur (CSP) */
+const cspHits=[];
+document.addEventListener('securitypolicyviolation',e=>{cspHits.push({d:e.effectiveDirective||e.violatedDirective,u:e.blockedURI,p:e.originalPolicy});});
+/* ====================================================================
+   CONFIG
+   ==================================================================== */
+const FOURMIES=[50.0167,4.0500];
+const OVERPASS_DEFAULT=['https://overpass.private.coffee/api/interpreter','https://overpass-api.de/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+const SERVER_NAME=u=>{try{return new URL(u).hostname}catch(e){return u}};
+const TLAT=0.08, TLON=0.12;             // grille des tuiles de données (~9 km)
+const MAX_AGE=45*24*3600e3;             // données rafraîchies au bout de 45 jours
+const MIN_DATA_ZOOM=12, MIN_DRAW_ZOOM=11;
+const CATS={
+  mine :{label:'Vérifié par moi ✓',                    color:'#22d3ee',w:5.5, route:true, show:true, locked:'route'},
+  open :{label:'Chemin ouvert (accès indiqué)',         color:'#16a34a',w:4.5, route:true, show:true},
+  unk  :{label:'Chemin sans restriction connue',        color:'#a3e635',w:3.5, route:true, show:true},
+  agri :{label:'Réservé agricole / forestier',          color:'#f59e0b',w:3.5, dash:'7 5',route:false,show:true},
+  dom  :{label:'Chemin en forêt domaniale (ONF)',       color:'#c084fc',w:3.5, dash:'2 6',route:false,show:true},
+  restr:{label:'Riverains / restreint / saisonnier',    color:'#fb7185',w:3,   dash:'4 4',route:false,show:true},
+  road :{label:'Route goudronnée (liaison)',            color:'#60a5fa',w:2.5, route:true, show:false},
+  no   :{label:'Interdit / sentier / voie rapide',      color:'#dc2626',w:2,   dash:'2 4',route:false,show:true, locked:'noroute'}
+};
+const TRAIL_CATS=new Set(['mine','open','unk','agri','dom','restr']);
+const IMPASSABLE=new Set(['bollard','block','jersey_barrier','log','kissing_gate','stile','turnstile','full-height_turnstile','cycle_barrier','fence','wall']);
+const GATE=new Set(['gate','lift_gate','swing_gate','chain','sliding_gate']);
+const isTouch=matchMedia('(pointer:coarse)').matches;
+
+/* ====================================================================
+   STOCKAGE
+   ==================================================================== */
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+          set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+const DB={db:null,
+  open(){if(this.db)return Promise.resolve(this.db);return new Promise((res,rej)=>{try{const r=indexedDB.open('pistes-quad-v3',1);
+    r.onupgradeneeded=()=>{r.result.createObjectStore('tiles',{keyPath:'k'});};r.onsuccess=()=>{this.db=r.result;res(r.result)};r.onerror=()=>rej(r.error);}catch(e){rej(e)}});},
+  async tx(mode,fn){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('tiles',mode);const st=t.objectStore('tiles');const q=fn(st);t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);});},
+  get(k){return this.tx('readonly',s=>s.get(k)).catch(()=>null)},
+  put(v){return this.tx('readwrite',s=>s.put(v)).catch(()=>null)},
+  keys(){return this.tx('readonly',s=>s.getAllKeys()).catch(()=>[])},
+  clear(){return this.tx('readwrite',s=>s.clear()).catch(()=>null)}
+};
+const prefs=LS.get('pq_prefs',{});
+for(const k in CATS){if(prefs['r_'+k]!==undefined&&!CATS[k].locked)CATS[k].route=prefs['r_'+k];if(prefs['s_'+k]!==undefined)CATS[k].show=prefs['s_'+k];}
+let notes=LS.get('pq_notes',{});   // wayId -> {s:'ok'|'no', n:texte, d:date}
+function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,loopKm:$('loopKm').value,noReuse:$('noReuse').checked};
+  for(const k in CATS){p['r_'+k]=CATS[k].route;p['s_'+k]=CATS[k].show;}LS.set('pq_prefs',p);}
+
+/* ====================================================================
+   OUTILS
+   ==================================================================== */
+const $=id=>document.getElementById(id);
+function toast(msg,ms){const t=$('toast');t.textContent=msg;t.style.display='block';clearTimeout(toast._t);if(ms!==0)toast._t=setTimeout(()=>t.style.display='none',ms||3500);}
+function chip(msg){const c=$('chip');if(!msg){c.style.display='none';return;}c.textContent=msg;c.style.display='inline-block';}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function hav(a,b){const R=6371000,r=Math.PI/180;const dLa=(b[0]-a[0])*r,dLo=(b[1]-a[1])*r;const s=Math.sin(dLa/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));}
+function dest(p,brg,d){const r=Math.PI/180;return [p[0]+d*Math.cos(brg*r)/111320,p[1]+d*Math.sin(brg*r)/(111320*Math.cos(p[0]*r))];}
+function km(m){return (m/1000).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:m<10000?2:1})+' km';}
+function dur(h){return Math.floor(h)+'h'+String(Math.round((h%1)*60)).padStart(2,'0');}
+function el(html){const d=document.createElement('div');d.innerHTML=html;return d;}
+const ll2a=p=>[p.lat,p.lng];
+class Heap{constructor(){this.a=[]}get size(){return this.a.length}
+  push(k,v){const a=this.a;a.push([k,v]);let i=a.length-1;while(i>0){const p=(i-1)>>1;if(a[p][0]<=a[i][0])break;[a[p],a[i]]=[a[i],a[p]];i=p;}}
+  pop(){const a=this.a,top=a[0],last=a.pop();if(a.length){a[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<a.length&&a[l][0]<a[m][0])m=l;if(r<a.length&&a[r][0]<a[m][0])m=r;if(m===i)break;[a[m],a[i]]=[a[i],a[m]];i=m;}}return top;}}
+
+/* ====================================================================
+   CARTE
+   ==================================================================== */
+const map=L.map('map',{zoomControl:false,maxZoom:20,tapHold:true,worldCopyJump:false}).setView(FOURMIES,13);
+L.control.zoom({position:'bottomleft'}).addTo(map);
+L.control.scale({imperial:false,position:'bottomleft'}).addTo(map);
+const ign=(layer,fmt,style,maxN)=>{const t=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER='+layer+'&STYLE='+encodeURIComponent(style||'normal')+'&TILEMATRIXSET=PM&FORMAT='+fmt+'&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{maxNativeZoom:maxN||18,maxZoom:20,attribution:'© IGN Géoplateforme'});t._ign=true;return t;};
+const BASES={
+  'Plan IGN':ign('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2','image/png','normal',18),
+  'Photos aériennes IGN':ign('ORTHOIMAGERY.ORTHOPHOTOS','image/jpeg','normal',19),
+  'OpenStreetMap':L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxNativeZoom:19,maxZoom:20,attribution:'© OpenStreetMap'}),
+  'Topo (OpenTopoMap)':L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxNativeZoom:17,maxZoom:20,attribution:'© OpenTopoMap, OSM'})
+};
+let curBase=prefs.base&&BASES[prefs.base]?prefs.base:'Plan IGN';
+BASES[curBase].addTo(map);
+const cadastre=ign('CADASTRALPARCELS.PARCELLAIRE_EXPRESS','image/png','PCI vecteur',19);cadastre.options.opacity=0.85;
+const renderer=L.canvas({padding:0.4,tolerance:isTouch?14:8});
+const catLayers={};for(const k in CATS)catLayers[k]=L.layerGroup();
+const barrierLayer=L.layerGroup(),forestLayer=L.layerGroup().addTo(map),areaLayer=L.layerGroup();
+const routeLayer=L.layerGroup().addTo(map),wpLayer=L.layerGroup().addTo(map),importLayer=L.layerGroup().addTo(map),rideLayer=L.layerGroup().addTo(map);
+
+/* ====================================================================
+   DONNÉES
+   ==================================================================== */
+const nodes=new Map(),ways=new Map(),barriers=new Map(),forests=new Map(),loadedTiles=new Set();
+const wayPl=new Map(),drawnBarriers=new Set();
+let adj=null,graphDirty=true;
+
+/* ---------- Classification légale ---------- */
+const PAVED=new Set(['asphalt','paved','concrete','concrete:plates','concrete:lanes','paving_stones','sett','chipseal','metal']);
+function isPaved(t){if(t.surface)return PAVED.has(t.surface);return t.highway!=='track';}
+function classify(t){
+  const hw=t.highway;
+  if(['motorway','motorway_link','trunk','trunk_link'].includes(hw))return['no','voie rapide / 2x2 voies'];
+  let src=null,val=null;
+  for(const k of['atv','motorcar','motor_vehicle','vehicle','access'])if(t[k]){src=k;val=t[k].toLowerCase();break;}
+  const soft=['path','footway','bridleway','cycleway','steps','pedestrian'].includes(hw);
+  const cond=t['motor_vehicle:conditional']||t['access:conditional']||t['vehicle:conditional'];
+  if(val){
+    const v=val.split(';').map(s=>s.trim());
+    if(v.some(x=>['yes','permissive','designated'].includes(x))){
+      if(soft&&src==='access')return['no','sentier (accès « '+val+' » vise les piétons)'];
+      if(cond)return['restr',src+'='+val+' mais restriction conditionnelle : '+cond];
+      return[(hw==='track'||!isPaved(t))?'open':'road',src+'='+val];
+    }
+    if(v.every(x=>['agricultural','forestry'].includes(x)))return['agri',src+'='+val];
+    if(v.some(x=>['destination','customers','delivery'].includes(x)))return['restr',src+'='+val+' (riverains / desserte)'];
+    if(v.some(x=>['no','private','discouraged'].includes(x))){
+      if(t.agricultural==='yes'||t.forestry==='yes')return['agri',src+'='+val+' sauf agricole / forestier'];
+      return['no',src+'='+val+(src==='motorcar'?' (B7a : interdit aux quads et SSV aussi)':'')];
+    }
+  }
+  if(soft)return['no','sentier / chemin piéton (highway='+hw+')'];
+  if(cond)return['restr','restriction conditionnelle : '+cond];
+  if(hw==='track')return['unk','chemin sans tag d’accès : présumé chemin rural, à vérifier'];
+  if(hw==='unclassified'&&!isPaved(t))return['unk','petite voie non goudronnée sans restriction'];
+  return['road','route publique'];
+}
+function classifyWay(w){
+  let [c,r]=classify(w.tags);w.dom=inDomForest(w);
+  if(w.dom&&(c==='unk'||c==='restr')){c='dom';r+=' · situé en forêt domaniale';}
+  const n=notes[w.id];
+  if(n&&n.s==='ok'){c='mine';r='Vérifié sur place par toi'+(n.n?' : '+n.n:'');}
+  else if(n&&n.s==='no'){c='no';r='Signalé interdit par toi'+(n.n?' : '+n.n:'');}
+  w.cat=c;w.reason=r;
+}
+
+/* ---------- Tuiles de données ---------- */
+const tkey=(i,j)=>i+'_'+j;
+function tileBBox(k){const[i,j]=k.split('_').map(Number);return[i*TLAT,j*TLON,(i+1)*TLAT,(j+1)*TLON];}
+function tilesIn(b){const out=[];const i0=Math.floor(b.getSouth()/TLAT),i1=Math.floor(b.getNorth()/TLAT),j0=Math.floor(b.getWest()/TLON),j1=Math.floor(b.getEast()/TLON);
+  for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++)out.push(tkey(i,j));return out;}
+/* ---- Serveurs Overpass : un seul appel à la fois, respect strict des refus (429) ---- */
+function servers(){const c=(prefs.server||'').trim();return c?[c].concat(OVERPASS_DEFAULT.filter(u=>u!==c)):OVERPASS_DEFAULT;}
+const cooldown=new Map();   // serveur -> date de fin d'attente
+let lastErrors=[];
+async function overpass(q){
+  for(let round=0;round<5;round++){
+    const errs=[];
+    for(const u of servers()){
+      const wait=(cooldown.get(u)||0)-Date.now();
+      if(wait>0){errs.push(SERVER_NAME(u)+' : en pause ('+Math.ceil(wait/1000)+' s)');continue;}
+      try{
+        const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),70000);
+        const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctl.signal});
+        clearTimeout(to);
+        if(r.status===429||r.status===504||r.status===503){cooldown.set(u,Date.now()+(r.status===429?40000:20000));errs.push(SERVER_NAME(u)+' : '+(r.status===429?'trop de requêtes (429)':'surchargé ('+r.status+')'));continue;}
+        if(!r.ok){errs.push(SERVER_NAME(u)+' : erreur HTTP '+r.status);cooldown.set(u,Date.now()+60000);continue;}
+        const j=await r.json();
+        if(j.remark&&/runtime error|timed out|out of memory/i.test(j.remark)&&!(j.elements||[]).length){errs.push(SERVER_NAME(u)+' : '+j.remark.slice(0,80));cooldown.set(u,Date.now()+20000);continue;}
+        lastErrors=[];return j;
+      }catch(e){
+        errs.push(SERVER_NAME(u)+' : '+(e.name==='AbortError'?'délai dépassé':'injoignable ('+(e.message||e.name)+')'));
+        cooldown.set(u,Date.now()+30000);
+      }
+    }
+    lastErrors=errs;
+    // tous en échec ou en pause : on attend la fin de la pause la plus courte (≥ 30 s demandé par les serveurs)
+    const next=Math.min(...servers().map(u=>(cooldown.get(u)||0)))-Date.now();
+    if(round<4&&navigator.onLine){
+      const ms=Math.max(15000,next+500);const end=Date.now()+ms;
+      await new Promise(res=>{const it=setInterval(()=>{const r=Math.ceil((end-Date.now())/1000);if(r<=0){clearInterval(it);res();}else chip('Serveurs occupés, nouvel essai dans '+r+' s…');},1000);});
+    }
+  }
+  throw new Error(lastErrors.join(' · ')||'serveurs injoignables');
+}
+function tileQuery(k){
+  const bb=tileBBox(k).map(x=>x.toFixed(5)).join(',');
+  return `[out:json][timeout:60][maxsize:134217728];
+way["highway"~"^(track|unclassified|tertiary|tertiary_link|secondary|secondary_link|primary|primary_link|residential|living_street|road|path|bridleway|trunk|trunk_link|motorway)$"](${bb});
+out body geom qt;
+node["barrier"](${bb});out body qt;
+(rel["landuse"="forest"]["name"~"domaniale",i](${bb});way["landuse"="forest"]["name"~"domaniale",i](${bb});
+ rel["boundary"="protected_area"]["name"~"domaniale",i](${bb});
+ rel["landuse"="forest"]["operator"~"ONF|Office national des for",i](${bb});way["landuse"="forest"]["operator"~"ONF|Office national des for",i](${bb}););
+out geom qt;`;
+}
+function ingest(els,replace){
+  const touched=new Set(),newBar=[],newFor=[];
+  for(const e of els){
+    if(e.type==='node'){if(!nodes.has(e.id))nodes.set(e.id,[e.lat,e.lon]);if(e.tags&&e.tags.barrier&&!barriers.has(e.id)){barriers.set(e.id,e.tags);newBar.push(e.id);}}
+    else if(e.type==='way'&&e.tags&&e.tags.highway&&e.nodes){
+      if(e.geometry)for(let i=0;i<e.nodes.length;i++){const g=e.geometry[i];if(g&&!nodes.has(e.nodes[i]))nodes.set(e.nodes[i],[g.lat,g.lon]);}
+      if(replace||!ways.has(e.id)){ways.set(e.id,{id:e.id,tags:e.tags,nds:e.nodes});touched.add(e.id);}}
+    else if((e.type==='way'||e.type==='relation')&&e.tags&&!e.tags.highway)addForest(e,newFor);
+  }
+  // une nouvelle forêt domaniale peut changer le statut de chemins déjà affichés
+  for(const f of newFor)for(const w of ways.values())if(!touched.has(w.id)&&(w.cat==='unk'||w.cat==='restr')){const m=wayMid(w);if(m&&inBox(m,f.box))touched.add(w.id);}
+  for(const id of touched){const w=ways.get(id);if(w){const old=w.cat;classifyWay(w);if(old!==w.cat||!wayPl.has(id)||replace)drawWay(w);}}
+  for(const id of newBar)drawBarrier(id);
+  for(const f of newFor)for(const s of f.lines)if(s.length>1)L.polyline(s,{renderer,color:'#c084fc',weight:2,opacity:.75,interactive:false}).addTo(forestLayer);
+  if(touched.size)graphDirty=true;
+}
+/* Forêts domaniales : test « point dans polygone » par parité des croisements
+   (marche avec les morceaux de contour dans n'importe quel ordre, trous compris) */
+function addForest(e,list){
+  const id=e.type+e.id;if(forests.has(id))return;
+  const lines=[];
+  if(e.geometry)lines.push(e.geometry.filter(Boolean).map(p=>[p.lat,p.lon]));
+  if(e.members)for(const m of e.members)if(m.type==='way'&&m.geometry)lines.push(m.geometry.filter(Boolean).map(p=>[p.lat,p.lon]));
+  if(!lines.length)return;
+  let s=90,w=180,n=-90,ea=-180;for(const l of lines)for(const p of l){if(p[0]<s)s=p[0];if(p[0]>n)n=p[0];if(p[1]<w)w=p[1];if(p[1]>ea)ea=p[1];}
+  const f={name:e.tags.name||'Forêt domaniale',lines,box:[s,w,n,ea]};forests.set(id,f);list.push(f);
+}
+const inBox=(p,b)=>p[0]>=b[0]&&p[0]<=b[2]&&p[1]>=b[1]&&p[1]<=b[3];
+function wayMid(w){return nodes.get(w.nds[Math.floor(w.nds.length/2)]);}
+function inPoly(p,lines){let c=false;const y=p[0],x=p[1];
+  for(const l of lines)for(let i=0;i<l.length-1;i++){const a=l[i],b=l[i+1];if((a[0]>y)!==(b[0]>y)){const xi=a[1]+(y-a[0])*(b[1]-a[1])/(b[0]-a[0]);if(x<xi)c=!c;}}
+  return c;}
+function inDomForest(w){
+  if(w.tags.highway!=='track'&&w.tags.highway!=='unclassified'&&w.tags.highway!=='path')return false;
+  const m=wayMid(w);if(!m)return false;
+  for(const f of forests.values())if(inBox(m,f.box)&&inPoly(m,f.lines))return true;
+  return false;
+}
+
+/* ---- Données locales pré-calculées (dossier data/, générées chaque mois par GitHub) ---- */
+let staticIdx=null;
+const staticReady=fetch('data/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null)
+  .then(j=>{if(j&&j.keys){staticIdx={date:j.date,keys:new Set(j.keys)};updateInfo();}}).catch(()=>{});
+async function loadStatic(k,force){
+  await staticReady;
+  if(!staticIdx||!staticIdx.keys.has(k))return false;
+  const rec=await DB.get(k);
+  if(rec&&rec.v===staticIdx.date&&!force){ingest(rec.els);loadedTiles.add(k);return true;}
+  try{const r=await fetch('data/'+k+'.json');if(r.ok){const j=await r.json();DB.put({k,t:Date.now(),v:staticIdx.date,els:j.elements});ingest(j.elements,force);loadedTiles.add(k);return true;}}catch(e){}
+  if(rec){ingest(rec.els);loadedTiles.add(k);return true;}
+  return false;
+}
+/* file d'attente réseau : 1 requête Overpass à la fois (consigne des serveurs publics) */
+let active=0;const waiters=[];
+const slot=()=>active<1?(active++,Promise.resolve()):new Promise(r=>waiters.push(r));
+const release=()=>{const n=waiters.shift();if(n)n();else active--;};
+const pending=new Map();
+function loadTile(k,force){
+  if(!force&&loadedTiles.has(k))return Promise.resolve(true);
+  if(pending.has(k))return pending.get(k);
+  const p=(async()=>{
+    if(await loadStatic(k,force))return true;
+    const rec=await DB.get(k);
+    if(rec&&!force&&(Date.now()-rec.t<MAX_AGE||!navigator.onLine)){ingest(rec.els);loadedTiles.add(k);return true;}
+    await slot();
+    try{const j=await overpass(tileQuery(k));DB.put({k,t:Date.now(),els:j.elements});ingest(j.elements,force);loadedTiles.add(k);return true;}
+    catch(e){console.warn('tuile',k,e);if(rec){ingest(rec.els);loadedTiles.add(k);return true;}return false;}
+    finally{release();}
+  })();
+  pending.set(k,p);p.finally(()=>pending.delete(k));return p;
+}
+function showLoadError(fail){
+  toast(`${fail} zone(s) non chargée(s). Touche ici ou va dans ❓ Aide → Tester les serveurs.`,7000);
+  $('loadErr').innerHTML=`<div class="warn"><b>Chargement des chemins impossible pour ${fail} zone(s).</b><br>${(lastErrors.length?lastErrors:['raison inconnue']).map(esc).join('<br>')}<br><br>Les serveurs gratuits d'OpenStreetMap sont souvent saturés (surtout en soirée). L'appli réessaie toute seule dans 2 minutes ; laisse-la ouverte. Les zones déjà chargées restent en mémoire, il ne faudra pas les recharger.</div>`;
+}
+let loadJobs=0,retryT=null;
+async function ensureTiles(keys,force,label){
+  const todo=force?keys:keys.filter(k=>!loadedTiles.has(k));
+  if(!todo.length)return true;
+  loadJobs++;let done=0,fail=0;
+  const upd=()=>chip(`${label||'Chemins'} ${done}/${todo.length}…`);upd();
+  await Promise.all(todo.map(k=>loadTile(k,force).then(ok=>{done++;if(!ok)fail++;upd();})));
+  loadJobs--;if(!loadJobs)chip(null);
+  updateInfo();drawAreas();
+  if(fail){showLoadError(fail);if(!force){clearTimeout(retryT);retryT=setTimeout(()=>{const ks=todo.filter(k=>!loadedTiles.has(k));if(ks.length){chip('Nouvel essai automatique…');ensureTiles(ks,false,label);}},120000);}}
+  else $('loadErr').innerHTML='';
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+  if(wps.length>1)scheduleRoute();
+  return !fail;
+}
+function viewTiles(pad){return tilesIn(map.getBounds().pad(pad||0));}
+let autoT=null;
+function autoLoad(){
+  clearTimeout(autoT);
+  autoT=setTimeout(()=>{
+    syncVisibility();
+    if(!$('autoLoad').checked)return;
+    if(map.getZoom()<MIN_DATA_ZOOM){if(!loadJobs)chip(ways.size?null:'Zoome pour charger les chemins');return;}
+    const ks=viewTiles(0.15);
+    if(ks.length>9){chip('Zoome un peu pour charger les chemins');return;}
+    ensureTiles(ks);
+  },500);
+}
+map.on('moveend',autoLoad);
+function manualLoad(force){
+  if(map.getZoom()<MIN_DATA_ZOOM-1){toast('Zoome davantage pour charger les chemins.');return;}
+  const ks=viewTiles(0.05);if(ks.length>16){toast('Zone trop grande, zoome un peu.');return;}
+  ensureTiles(ks,force,force?'Rafraîchissement':'Chemins');
+}
+$('bLoad').onclick=()=>manualLoad(false);
+$('bRefresh').onclick=()=>manualLoad(true);
+$('bFourmies').onclick=()=>{map.setView(FOURMIES,12);ensureTiles(tilesIn(L.latLngBounds([FOURMIES[0]-0.115,FOURMIES[1]-0.175],[FOURMIES[0]+0.115,FOURMIES[1]+0.175])),false,'Zone Fourmies');};
+
+/* ---------- Rendu ---------- */
+function drawWay(w){
+  const old=wayPl.get(w.id);if(old)old._g.removeLayer(old);
+  const ll=[];for(const id of w.nds){const p=nodes.get(id);if(p)ll.push(p);}
+  if(ll.length<2)return;
+  const c=CATS[w.cat];
+  const pl=L.polyline(ll,{renderer,color:c.color,weight:c.w,dashArray:c.dash||null,opacity:.92});
+  pl._wid=w.id;pl._g=catLayers[w.cat];pl.on('click',onWayClick);catLayers[w.cat].addLayer(pl);wayPl.set(w.id,pl);
+}
+function drawBarrier(id){
+  const t=barriers.get(id),p=nodes.get(id);if(!p||drawnBarriers.has(id))return;
+  const imp=IMPASSABLE.has(t.barrier),gate=GATE.has(t.barrier);if(!imp&&!gate)return;
+  drawnBarriers.add(id);
+  L.circleMarker(p,{renderer,radius:isTouch?6:5,color:'#fff',weight:1.5,fillColor:imp?'#dc2626':'#f59e0b',fillOpacity:1})
+   .on('click',e=>{L.DomEvent.stopPropagation(e);if(mode==='trace'){addWp(e.latlng);return;}
+     L.popup().setLatLng(p).setContent(el(`<b>${imp?'Obstacle infranchissable':'Portail / barrière'}</b><br>barrier=${esc(t.barrier)}${t.access?'<br>access='+esc(t.access):''}${linksHTML(p[0],p[1])}`)).openOn(map);})
+   .addTo(barrierLayer);
+}
+function drawAreas(){areaLayer.clearLayers();for(const k of loadedTiles){const[s,w,n,e]=tileBBox(k);L.rectangle([[s,w],[n,e]],{renderer,color:'#9ca3af',weight:1,fill:false,dashArray:'4 6',interactive:false}).addTo(areaLayer);}}
+function syncVisibility(){
+  const z=map.getZoom();
+  for(const k in CATS){const want=z>=MIN_DRAW_ZOOM&&CATS[k].show;const has=map.hasLayer(catLayers[k]);if(want&&!has)catLayers[k].addTo(map);else if(!want&&has)map.removeLayer(catLayers[k]);}
+  const wb=z>=14&&$('showBarriers').checked;if(wb!==map.hasLayer(barrierLayer))wb?barrierLayer.addTo(map):map.removeLayer(barrierLayer);
+  const wa=$('showAreas').checked;if(wa!==map.hasLayer(areaLayer))wa?areaLayer.addTo(map):map.removeLayer(areaLayer);
+}
+function updateInfo(){
+  const cnt={},len={};
+  for(const w of ways.values()){cnt[w.cat]=(cnt[w.cat]||0)+1;}
+  const f=[...new Set([...forests.values()].map(f=>f.name))];
+  $('dataInfo').innerHTML=(staticIdx?`📦 Données Avesnois / Thiérache intégrées (${staticIdx.keys.size} zones, mises à jour le ${new Date(staticIdx.date).toLocaleDateString('fr-FR')}). Hors de cette zone : serveurs publics.<br>`:'')+`${loadedTiles.size} zone(s) · ${ways.size.toLocaleString('fr')} voies : `+Object.keys(CATS).filter(k=>cnt[k]).map(k=>`<span style="color:${CATS[k].color}">●${cnt[k]}</span>`).join(' ')+(f.length?`<br>Forêts domaniales détectées : ${f.map(esc).join(', ')}`:'');
+  const nn=Object.keys(notes).length,ok=Object.values(notes).filter(n=>n.s==='ok').length;
+  $('notesInfo').textContent=nn?`${ok} chemin(s) vérifié(s) ✓, ${nn-ok} signalé(s) interdit(s) ⛔. Touche un chemin en mode Explorer pour le noter.`:'Aucun. Touche un chemin en mode Explorer pour le noter « ✓ vérifié » ou « ⛔ interdit ». Tes notes passent avant les données OSM.';
+}
+
+/* ====================================================================
+   POPUPS / EXPLORATION
+   ==================================================================== */
+function linksHTML(lat,lon){
+  lat=(+lat).toFixed(6);lon=(+lon).toFixed(6);
+  return `<div class="links">
+<a target="_blank" rel="noopener" href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}">📷 Street View</a>
+<a target="_blank" rel="noopener" href="https://api.panoramax.xyz/#focus=map&map=18/${lat}/${lon}">Panoramax</a>
+<a target="_blank" rel="noopener" href="https://www.mapillary.com/app/?lat=${lat}&lng=${lon}&z=17">Mapillary</a>
+<a target="_blank" rel="noopener" href="https://www.geoportail.gouv.fr/carte?c=${lon},${lat}&z=18&l0=ORTHOIMAGERY.ORTHOPHOTOS::GEOPORTAIL:OGC:WMTS(1)&l1=CADASTRALPARCELS.PARCELLAIRE_EXPRESS::GEOPORTAIL:OGC:WMTS(1)&permalink=yes">Géoportail + cadastre</a>
+<a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}">Google Maps</a></div>`;
+}
+const SHOW_TAGS=['name','highway','tracktype','surface','smoothness','width','access','vehicle','motor_vehicle','atv','motorcar','agricultural','forestry','motor_vehicle:conditional','foot','horse','ford','note','description'];
+function onWayClick(e){
+  L.DomEvent.stopPropagation(e);
+  if(mode==='trace'){addWp(e.latlng);return;}
+  openWayPopup(ways.get(e.target._wid),e.latlng);
+}
+function openWayPopup(w,latlng){
+  if(!w)return;const c=CATS[w.cat],n=notes[w.id]||{};
+  const rows=SHOW_TAGS.filter(k=>w.tags[k]).map(k=>`<tr><td>${k}</td><td>${esc(w.tags[k])}</td></tr>`).join('');
+  const node=el(`<b style="color:${c.color}">● ${c.label}</b><br><span style="font-size:12px">${esc(w.reason)}</span>
+    <table class="tags">${rows}</table>${linksHTML(latlng.lat,latlng.lng)}
+    <div style="margin-top:8px;font-weight:700">Ma note sur ce chemin</div>
+    <textarea rows="2" placeholder="ex. panneau B7b à l'entrée, ornières…" style="margin-top:4px;font-size:14px">${esc(n.n||'')}</textarea>
+    <div class="links"><button class="g" data-a="ok">✓ Vérifié OK</button><button class="r" data-a="no">⛔ Interdit</button>${notes[w.id]?'<button data-a="del">Effacer ma note</button>':''}</div>
+    <div class="links"><a target="_blank" rel="noopener" href="https://www.openstreetmap.org/way/${w.id}">Fiche OSM</a><a target="_blank" rel="noopener" href="https://www.openstreetmap.org/edit?way=${w.id}">Corriger OSM</a></div>`);
+  node.querySelectorAll('button[data-a]').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a,txt=node.querySelector('textarea').value.trim();
+    if(a==='del')delete notes[w.id];else notes[w.id]={s:a,n:txt,d:Date.now()};
+    LS.set('pq_notes',notes);classifyWay(w);drawWay(w);graphDirty=true;updateInfo();map.closePopup();
+    toast(a==='ok'?'Chemin noté vérifié ✓ (prioritaire pour les tracés).':a==='no'?'Chemin noté interdit ⛔ (évité par les tracés).':'Note effacée.');
+    if(wps.length>1)scheduleRoute();
+  });
+  L.popup({maxWidth:320}).setLatLng(latlng).setContent(node).openOn(map);
+}
+map.on('click',e=>{
+  if(mode==='trace'){addWp(e.latlng);return;}
+  L.popup().setLatLng(e.latlng).setContent(el(`<b>Voir ce point</b>${linksHTML(e.latlng.lat,e.latlng.lng)}<div class="links"><button data-a="add">+ Ajouter comme point d'itinéraire</button></div>`)).openOn(map);
+  setTimeout(()=>{const b=document.querySelector('.leaflet-popup button[data-a=add]');if(b)b.onclick=()=>{map.closePopup();addWp(e.latlng);};},0);
+});
+map.on('contextmenu',e=>{addWp(e.latlng);});
+
+/* ====================================================================
+   ROUTAGE
+   ==================================================================== */
+function costFactor(w,rp){
+  switch(w.cat){
+    case 'mine':return 0.9;case 'open':return 1;case 'unk':return 1.05;case 'agri':return 1.1;case 'dom':return 1.15;case 'restr':return 2.5;
+    case 'road':{const hw=w.tags.highway;let b=1;if(/^tertiary/.test(hw))b=1.3;else if(/^secondary/.test(hw))b=2;else if(/^primary/.test(hw))b=3.5;return b*(1+rp);}
+  }return 1;
+}
+function onewayDir(t){const o=t.oneway;if(o==='yes'||o==='1'||t.junction==='roundabout')return 1;if(o==='-1')return -1;return 0;}
+function buildGraph(){
+  const rp=+$('pref').value;adj=new Map();
+  const blocked=new Set(),gates=new Set();
+  for(const[id,t]of barriers){if(IMPASSABLE.has(t.barrier))blocked.add(id);else if(GATE.has(t.barrier))gates.add(id);}
+  const add=(u,v,c,d,w)=>{let l=adj.get(u);if(!l){l=[];adj.set(u,l);}l.push([v,c,d,w]);};
+  for(const w of ways.values()){
+    if(!CATS[w.cat].route)continue;
+    const f=costFactor(w,rp),ow=w.cat==='road'?onewayDir(w.tags):0;
+    for(let i=0;i<w.nds.length-1;i++){
+      const a=w.nds[i],b=w.nds[i+1];if(blocked.has(a)||blocked.has(b))continue;
+      const pa=nodes.get(a),pb=nodes.get(b);if(!pa||!pb)continue;
+      const d=hav(pa,pb),c=d*f;
+      if(ow>=0)add(a,b,c+(gates.has(b)?150:0),d,w.id);
+      if(ow<=0)add(b,a,c+(gates.has(a)?150:0),d,w.id);
+    }
+  }
+  adj._gates=gates;graphDirty=false;
+}
+function nearestNode(p,maxD){
+  let best=null,bd=Infinity;const cl=Math.cos(p[0]*Math.PI/180);
+  for(const id of adj.keys()){const q=nodes.get(id);const dy=q[0]-p[0],dx=(q[1]-p[1])*cl;const d=dx*dx+dy*dy;if(d<bd){bd=d;best=id;}}
+  if(best===null)return null;return hav(nodes.get(best),p)<=(maxD||400)?best:null;
+}
+function astar(s,t,used){
+  if(s===t)return{path:[s],segs:[]};
+  const tp=nodes.get(t),g=new Map([[s,0]]),prev=new Map(),h=new Heap(),closed=new Set();
+  h.push(hav(nodes.get(s),tp),s);let it=0;
+  while(h.size){const[,u]=h.pop();if(u===t)break;if(closed.has(u))continue;closed.add(u);if(++it>1500000)break;
+    const gu=g.get(u),l=adj.get(u);if(!l)continue;
+    for(const[v,c,d,w]of l){const ng=gu+(used&&used.has(w)?c*3:c);const ov=g.get(v);if(ov===undefined||ng<ov){g.set(v,ng);prev.set(v,[u,w,d]);h.push(ng+hav(nodes.get(v),tp),v);}}}
+  if(!prev.has(t))return null;
+  const path=[t],segs=[];let x=t;
+  while(x!==s){const[u,w,d]=prev.get(x);segs.push({w,d,n:x});path.push(u);x=u;}
+  return{path:path.reverse(),segs:segs.reverse()};
+}
+function routeThrough(pts,loop,opt){
+  opt=opt||{};if(graphDirty||!adj)buildGraph();
+  const P=pts.slice();if(loop&&pts.length>1)P.push(pts[0]);
+  const sn=P.map(p=>nearestNode(p,opt.snapR));
+  const coords=[],legs=[],byCat={},used=opt.noReuse?new Set():null;let dist=0,gatesN=0;const fails=[];
+  for(let i=0;i<P.length-1;i++){
+    const a=sn[i],b=sn[i+1];
+    const r=(a!==null&&b!==null)?astar(a,b,used):null;
+    if(!r){fails.push(i);legs.push({fail:true,a:P[i],b:P[i+1]});continue;}
+    const s0=Math.max(0,coords.length-1);
+    for(const id of r.path){const p=nodes.get(id);if(!coords.length||coords[coords.length-1]!==p)coords.push(p);}
+    for(const s of r.segs){dist+=s.d;const c=ways.get(s.w).cat;byCat[c]=(byCat[c]||0)+s.d;if(adj._gates.has(s.n))gatesN++;if(used)used.add(s.w);}
+    legs.push({s:s0,e:coords.length-1});
+  }
+  let trail=0;for(const k in byCat)if(TRAIL_CATS.has(k))trail+=byCat[k];
+  return{coords,legs,dist,byCat,gatesN,fails,sn,trail};
+}
+
+/* ---------- Itinéraire courant ---------- */
+let mode='explore',wps=[],lastRoute=null,routeTimer=null;
+function scheduleRoute(){clearTimeout(routeTimer);routeTimer=setTimeout(computeRoute,80);}
+function computeRoute(){
+  routeLayer.clearLayers();lastRoute=null;
+  if(wps.length<2){showStats();saveDraft();return;}
+  if(!ways.size){showStats('Les chemins ne sont pas encore chargés pour cette zone.');L.polyline(wps,{color:'#e11d8f',weight:3,dashArray:'6 8'}).addTo(routeLayer);return;}
+  const r=routeThrough(wps.map(ll2a),$('loop').checked,{noReuse:$('noReuse').checked});
+  for(const lg of r.legs)if(lg.fail)L.polyline([lg.a,lg.b],{color:'#dc2626',weight:4,dashArray:'6 8',interactive:false}).addTo(routeLayer);
+  if(r.coords.length>1){
+    L.polyline(r.coords,{color:'#fff',weight:10,opacity:.9,interactive:false}).addTo(routeLayer);
+    L.polyline(r.coords,{color:'#e11d8f',weight:5.5,interactive:false}).addTo(routeLayer);
+    const cum=[0];for(let i=1;i<r.coords.length;i++)cum.push(cum[i-1]+hav(r.coords[i-1],r.coords[i]));r.cum=cum;
+  }
+  lastRoute=r;showStats();saveDraft();
+}
+function showStats(msg){
+  const box=$('stats');
+  if(msg){box.textContent=msg;return;}
+  if(!lastRoute){box.textContent=wps.length?`${wps.length} point — ajoute-en un autre.`:'Aucun itinéraire.';return;}
+  const r=lastRoute,road=r.byCat.road||0,h=r.trail/1000/15+road/1000/40;
+  let s=`<span class="big">${km(r.dist)}</span> · ≈ ${dur(h)} · <b>${r.dist?Math.round(r.trail/r.dist*100):0}%</b> de chemins<br>`;
+  s+=Object.keys(CATS).filter(k=>r.byCat[k]).map(k=>`<span style="color:${CATS[k].color}">■</span> ${CATS[k].label} : ${km(r.byCat[k])}`).join('<br>');
+  if(r.gatesN)s+=`<br>⚠️ ${r.gatesN} portail(s) / barrière(s) sur le trajet`;
+  if(r.byCat.agri||r.byCat.dom||r.byCat.restr)s+=`<br>⚠️ Tronçons restreints (orange / violet / rose) : vérifie sur place.`;
+  if(r.fails.length)s+=`<br>❌ Pas de passage autorisé pour le(s) tronçon(s) ${r.fails.map(i=>i+1).join(', ')} : zone pas encore chargée, point trop loin d'un chemin, ou réseau coupé. Le pointillé rouge est une ligne droite indicative.`;
+  box.innerHTML=s;
+}
+function saveDraft(){LS.set('pq_draft',{wps:wps.map(ll2a),loop:$('loop').checked});}
+
+/* ---------- Points ---------- */
+function addWp(ll){
+  ll=L.latLng(ll.lat,ll.lng);
+  // insertion dans le tracé si on clique près de lui
+  if(lastRoute&&lastRoute.coords.length>1&&wps.length>=2){
+    const P=map.latLngToLayerPoint(ll);let best=Infinity,leg=-1;
+    lastRoute.legs.forEach((lg,i)=>{if(lg.fail)return;for(let k=lg.s;k<lg.e;k++){const d=L.LineUtil.pointToSegmentDistance(P,map.latLngToLayerPoint(lastRoute.coords[k]),map.latLngToLayerPoint(lastRoute.coords[k+1]));if(d<best){best=d;leg=i;}}});
+    if(best<(isTouch?22:14)&&leg>=0&&leg<wps.length-1){wps.splice(leg+1,0,ll);drawWps();scheduleRoute();toast('Point inséré dans le tracé.',1500);return;}
+  }
+  wps.push(ll);drawWps();scheduleRoute();
+}
+function drawWps(){
+  wpLayer.clearLayers();
+  wps.forEach((p,i)=>{
+    const m=L.marker(p,{draggable:true,autoPan:true,icon:L.divIcon({className:'',html:`<div class="wp">${i===0?'D':i+1}</div>`,iconSize:[28,28],iconAnchor:[14,14]})});
+    m.on('dragend',()=>{wps[i]=m.getLatLng();scheduleRoute();});
+    m.on('click',ev=>{L.DomEvent.stopPropagation(ev);
+      const node=el(`<b>Point ${i===0?'de départ':i+1}</b><div class="links"><button class="r" data-a="del">Supprimer ce point</button>${i>0?'<button data-a="start">En faire le départ</button>':''}</div>${linksHTML(p.lat,p.lng)}`);
+      node.querySelector('[data-a=del]').onclick=()=>{wps.splice(i,1);map.closePopup();drawWps();scheduleRoute();};
+      const st=node.querySelector('[data-a=start]');if(st)st.onclick=()=>{wps=wps.slice(i).concat(wps.slice(0,i));map.closePopup();drawWps();scheduleRoute();};
+      L.popup().setLatLng(p).setContent(node).openOn(map);});
+    m.addTo(wpLayer);
+  });
+}
+$('bUndo').onclick=()=>{wps.pop();drawWps();scheduleRoute();};
+$('bClear').onclick=()=>{wps=[];drawWps();scheduleRoute();$('profile').innerHTML='';$('bGen2').disabled=true;};
+$('bRev').onclick=()=>{wps.reverse();drawWps();scheduleRoute();};
+$('loop').onchange=scheduleRoute;
+$('noReuse').onchange=()=>{savePrefs();scheduleRoute();};
+$('pref').oninput=()=>{graphDirty=true;savePrefs();scheduleRoute();};
+
+/* ====================================================================
+   BOUCLE AUTOMATIQUE
+   ==================================================================== */
+let genSeed=Math.random()*360,genStart=null;
+$('loopKm').oninput=()=>{$('loopKmV').textContent=$('loopKm').value+' km';savePrefs();};
+async function genLoop(again){
+  const target=+$('loopKm').value*1000;
+  if(!again||!genStart)genStart=wps[0]?ll2a(wps[0]):(meLL?meLL.slice():ll2a(map.getCenter()));
+  if(again)genSeed+=97;else genSeed=Math.random()*360;
+  const start=genStart,R=target/(2*Math.PI);
+  $('bGen').disabled=$('bGen2').disabled=true;
+  const span=1.7*R+800;
+  const b=L.latLngBounds(dest(start,180,span),dest(start,0,span)).extend(dest(start,90,span)).extend(dest(start,270,span));
+  const ks=tilesIn(b);
+  if(ks.length>25){toast('Boucle trop grande pour cette zone.');$('bGen').disabled=false;return;}
+  if(ks.some(k=>!loadedTiles.has(k)))toast('Chargement des chemins autour du départ… (rapide la prochaine fois)',4000);
+  const okLoad=await ensureTiles(ks,false,'Boucle : chemins');
+  if(!okLoad&&!ks.some(k=>loadedTiles.has(k))){chip(null);$('bGen').disabled=false;return;}
+  chip('Recherche de la meilleure boucle…');
+  await new Promise(r=>setTimeout(r,30));
+  if(graphDirty||!adj)buildGraph();
+  if(nearestNode(start,1500)===null){chip(null);toast('Aucun chemin autorisé près du point de départ.');$('bGen').disabled=false;return;}
+  let best=null,f=0.75;const t0=performance.now();
+  for(let k=0;k<16&&performance.now()-t0<6000;k++){
+    const th=genSeed+k*137.5,Rk=R*f,C=dest(start,th,Rk);
+    const pts=[start];for(const a of[90,180,270])pts.push(dest(C,th+180+a,Rk));
+    const r=routeThrough(pts,true,{snapR:1500,noReuse:true});
+    if(r.fails.length||r.dist<500)continue;
+    const score=r.trail/r.dist-1.6*Math.abs(r.dist-target)/target;
+    if(!best||score>best.score)best={score,r};
+    f=Math.max(0.3,Math.min(1.6,f*Math.pow(target/r.dist,0.8)));
+    if(k%3===2)await new Promise(r=>setTimeout(r,0));
+  }
+  chip(null);$('bGen').disabled=false;
+  if(!best){toast('Pas de boucle trouvée : réseau trop coupé ici. Essaie une autre distance ou un autre départ.',5000);return;}
+  wps=best.r.sn.slice(0,4).map(id=>L.latLng(nodes.get(id)));
+  $('loop').checked=true;drawWps();computeRoute();
+  $('bGen2').disabled=false;
+  if(lastRoute&&lastRoute.coords.length)map.fitBounds(L.latLngBounds(lastRoute.coords).pad(0.08),{paddingBottomRight:isTouch?[0,0]:[400,0]});
+  toast(`Boucle de ${km(lastRoute.dist)} avec ${Math.round(lastRoute.trail/lastRoute.dist*100)} % de chemins. Déplace les points pour l'ajuster.`,5000);
+}
+$('bGen').onclick=()=>genLoop(false);
+$('bGen2').onclick=()=>genLoop(true);
+
+/* ====================================================================
+   GPS / BALADE
+   ==================================================================== */
+let meLL=null,meMarker=null,watchId=null,firstFix=true,heading=null;
+function startGeo(cb){
+  if(!navigator.geolocation){toast('Géolocalisation indisponible sur cet appareil.');return false;}
+  if(watchId!==null)return true;
+  watchId=navigator.geolocation.watchPosition(onPos,err=>toast('Position indisponible : '+err.message+(location.protocol!=='https:'?' (il faut un site en https)':'')),{enableHighAccuracy:true,maximumAge:3000,timeout:20000});
+  return true;
+}
+function onPos(p){
+  meLL=[p.coords.latitude,p.coords.longitude];
+  if(p.coords.heading!=null&&!isNaN(p.coords.heading)&&p.coords.speed>1)heading=p.coords.heading;
+  if(!meMarker){meMarker=L.marker(meLL,{interactive:false,zIndexOffset:1000,icon:L.divIcon({className:'',html:'<div class="me"><div class="arr"></div><div class="dot"></div></div>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);}
+  else meMarker.setLatLng(meLL);
+  const elA=meMarker.getElement&&meMarker.getElement();if(elA){const a=elA.querySelector('.arr'),m=elA.querySelector('.me');if(heading!=null){a.style.display='block';m.style.transform=`rotate(${heading}deg)`;}}
+  if(firstFix){firstFix=false;if(!ride)map.setView(meLL,Math.max(map.getZoom(),15));}
+  if(ride)onRidePos(p);
+}
+$('bGps').onclick=()=>{if(meLL){map.setView(meLL,Math.max(map.getZoom(),15));if(ride)$('follow').checked=true;}else{toast('Recherche de ta position…');startGeo();}};
+
+let ride=null,rideTimer=null,wakeLock=null,offCount=0,offShown=false;
+async function wake(on){
+  try{if(on&&$('wake').checked&&'wakeLock'in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null;});}
+      if(!on&&wakeLock){await wakeLock.release();wakeLock=null;}}catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(ride&&document.visibilityState==='visible')wake(true);});
+function startRide(resume){
+  ride=resume||{t0:Date.now(),pts:[],dist:0,moving:0};
+  rideLayer.clearLayers();ride.line=L.polyline(ride.pts.map(p=>[p[0],p[1]]),{color:'#2563eb',weight:4,opacity:.9,interactive:false}).addTo(rideLayer);
+  startGeo();wake(true);
+  $('bRide').textContent='■ Terminer la balade';$('bRide').classList.remove('primary');$('bRide').classList.add('acc');
+  $('hud').style.display='flex';$('hRemW').style.display=lastRoute&&lastRoute.cum?'block':'none';
+  rideTimer=setInterval(updRide,1000);updRide();
+  if(meLL)map.setView(meLL,16);
+}
+function onRidePos(p){
+  const acc=p.coords.accuracy||99,pt=[p.coords.latitude,p.coords.longitude,Date.now()];
+  $('hSpd').textContent=p.coords.speed!=null&&p.coords.speed>=0?Math.round(p.coords.speed*3.6):'–';
+  if(acc<=60){const last=ride.pts[ride.pts.length-1];
+    const d=last?hav(last,pt):0;
+    if(!last||d>8){if(last&&d<500){ride.dist+=d;ride.moving+=Math.min(pt[2]-last[2],60000);}ride.pts.push(pt);ride.line.addLatLng([pt[0],pt[1]]);if(ride.pts.length%10===0)LS.set('pq_ride',{t0:ride.t0,pts:ride.pts,dist:ride.dist,moving:ride.moving});}}
+  if($('follow').checked)map.panTo(meLL,{animate:true});
+  // hors itinéraire
+  if(lastRoute&&lastRoute.cum&&$('offAlert').checked){
+    const near=nearestOnRoute(meLL);
+    $('hRem').textContent=(Math.max(0,(lastRoute.cum[lastRoute.cum.length-1]-lastRoute.cum[near.i]))/1000).toFixed(1).replace('.',',');
+    $('rRem').textContent=$('hRem').textContent+' km';
+    if(near.d>60&&acc<40){offCount++;if(offCount>=3&&!offShown){offShown=true;$('offBanner').style.display='block';try{navigator.vibrate&&navigator.vibrate([300,150,300]);}catch(e){}}}
+    else{offCount=0;if(offShown){offShown=false;$('offBanner').style.display='none';}}
+  }
+}
+let nearIdx=0;
+function nearestOnRoute(p){
+  const c=lastRoute.coords;let best=Infinity,bi=0;
+  const scan=(a,b)=>{for(let i=Math.max(0,a);i<Math.min(c.length,b);i++){const d=hav(c[i],p);if(d<best){best=d;bi=i;}}};
+  scan(nearIdx-150,nearIdx+300);if(best>150)scan(0,c.length);
+  nearIdx=bi;return{i:bi,d:best};
+}
+function updRide(){
+  if(!ride)return;const t=(Date.now()-ride.t0)/1000;
+  $('rDist').textContent=km(ride.dist);$('hDist').textContent=(ride.dist/1000).toFixed(1).replace('.',',');
+  $('rTime').textContent=Math.floor(t/3600)+':'+String(Math.floor(t%3600/60)).padStart(2,'0');
+  $('rAvg').textContent=ride.moving>60000?Math.round(ride.dist/1000/(ride.moving/3600000))+' km/h':'–';
+}
+function stopRide(){
+  clearInterval(rideTimer);wake(false);$('hud').style.display='none';$('offBanner').style.display='none';offShown=false;
+  $('bRide').textContent='▶ Démarrer la balade';$('bRide').classList.add('primary');$('bRide').classList.remove('acc');
+  const r=ride;ride=null;LS.set('pq_ride',null);
+  if(r.pts.length>1){
+    const name='Sortie du '+new Date(r.t0).toLocaleDateString('fr-FR')+' ('+km(r.dist)+')';
+    addSaved({type:'ride',name,date:r.t0,dist:r.dist,wps:[],coords:r.pts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]),times:r.pts.map(p=>p[2])});
+    toast('Sortie enregistrée dans « Mes tracés ».',4000);
+  }else toast('Balade terminée (trop courte pour être enregistrée).');
+}
+$('bRide').onclick=()=>ride?stopRide():startRide();
+map.on('dragstart',()=>{if(ride&&$('follow').checked){$('follow').checked=false;toast('Suivi en pause : 📍 pour recentrer.',2500);}});
+
+/* ====================================================================
+   RECHERCHE (géocodeur IGN)
+   ==================================================================== */
+let sT=null,searchMarker=null;
+$('bSearch').onclick=()=>{const b=$('searchBox');const on=b.style.display!=='block';b.style.display=on?'block':'none';if(on)$('q').focus();};
+$('q').oninput=()=>{clearTimeout(sT);const q=$('q').value.trim();if(q.length<3){$('searchRes').innerHTML='';return;}
+  sT=setTimeout(async()=>{try{
+    const c=map.getCenter();
+    const j=await(await fetch(`https://data.geopf.fr/geocodage/search?q=${encodeURIComponent(q)}&limit=6&lat=${c.lat}&lon=${c.lng}`)).json();
+    $('searchRes').innerHTML='';
+    for(const f of j.features||[]){const d=document.createElement('div');d.className='r';d.textContent=f.properties.label;
+      d.onclick=()=>{const[lon,lat]=f.geometry.coordinates;map.setView([lat,lon],f.properties.type==='municipality'?13:16);
+        if(searchMarker)map.removeLayer(searchMarker);searchMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:3,fillColor:'#e11d8f',fillOpacity:1}).addTo(map);
+        $('searchBox').style.display='none';};
+      $('searchRes').appendChild(d);}
+    if(!(j.features||[]).length)$('searchRes').innerHTML='<div class="r">Aucun résultat</div>';
+  }catch(e){$('searchRes').innerHTML='<div class="r">Recherche indisponible (réseau ?)</div>';}},350);};
+
+/* ====================================================================
+   GPX / PARTAGE / SAUVEGARDES
+   ==================================================================== */
+function gpx(name,coords,pts,times){
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Pistes Quad SSV" xmlns="http://www.topografix.com/GPX/1/1">
+<metadata><name>${esc(name)}</name><time>${new Date().toISOString()}</time></metadata>
+${(pts||[]).map((p,i)=>`<wpt lat="${(+p[0]).toFixed(6)}" lon="${(+p[1]).toFixed(6)}"><name>${i===0?'Départ':'Point '+(i+1)}</name></wpt>`).join('\n')}
+<trk><name>${esc(name)}</name><trkseg>
+${coords.map((c,i)=>`<trkpt lat="${(+c[0]).toFixed(6)}" lon="${(+c[1]).toFixed(6)}">${times&&times[i]?'<time>'+new Date(times[i]).toISOString()+'</time>':''}</trkpt>`).join('\n')}
+</trkseg></trk></gpx>`;
+}
+function download(fn,text,type){
+  const b=new Blob([text],{type:type||'application/gpx+xml'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download=fn;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},3000);
+}
+async function shareFile(fn,text,type){
+  type=type||'application/gpx+xml';
+  if(isTouch&&navigator.canShare){try{const f=new File([text],fn,{type});if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title:fn});return;}}catch(e){if(e.name==='AbortError')return;}}
+  download(fn,text,type);
+}
+const slug=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase()||'itineraire';
+$('bGpx').onclick=()=>{
+  if(!lastRoute||lastRoute.coords.length<2){toast('Pas encore d’itinéraire à exporter.');return;}
+  const name='Quad '+new Date().toLocaleDateString('fr-FR')+' '+km(lastRoute.dist);
+  shareFile(slug(name)+'.gpx',gpx(name,lastRoute.coords,wps.map(ll2a)));
+};
+$('bOsmand').onclick=()=>$('bGpx').onclick();
+$('bLink').onclick=async()=>{
+  if(wps.length<2){toast('Trace d’abord un itinéraire.');return;}
+  const url=location.href.split('#')[0]+'#r='+wps.map(p=>p.lat.toFixed(5)+','+p.lng.toFixed(5)).join(';')+($('loop').checked?'&b=1':'');
+  if(isTouch&&navigator.share){try{await navigator.share({title:'Itinéraire quad',url});return;}catch(e){if(e.name==='AbortError')return;}}
+  try{await navigator.clipboard.writeText(url);toast('Lien copié : ouvre-le sur ton téléphone (ou envoie-le à un pote).',4500);}
+  catch(e){$('saveBox').innerHTML=`<div class="muted">Copie ce lien :</div><input type="text" value="${esc(url)}" onclick="this.select()">`;}
+};
+function readHash(){
+  const m=location.hash.match(/#r=([^&]+)(&b=1)?/);if(!m)return false;
+  const pts=m[1].split(';').map(s=>s.split(',').map(Number)).filter(p=>p.length===2&&p.every(isFinite));
+  if(pts.length<2)return false;
+  wps=pts.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!m[2];drawWps();
+  map.fitBounds(L.latLngBounds(pts).pad(0.15));
+  ensureTiles(tilesIn(L.latLngBounds(pts).pad(0.15)),false,'Itinéraire reçu');
+  history.replaceState(null,'',location.pathname+location.search);
+  toast('Itinéraire reçu : calcul dès que les chemins sont chargés.',4000);return true;
+}
+
+function saved(){return LS.get('pq_routes',[]);}
+function addSaved(r){const l=saved();l.unshift(r);if(!LS.set('pq_routes',l)){toast('Stockage plein : supprime d’anciens tracés ou exporte-les.',5000);return false;}renderSaved();return true;}
+function renderSaved(){
+  const l=saved(),box=$('savedList');
+  if(!l.length){box.className='muted';box.textContent='Rien d’enregistré pour l’instant.';return;}
+  box.className='';box.innerHTML='';
+  l.forEach((r,i)=>{
+    const d=el(`<div class="item"><div class="t">${r.type==='ride'?'🏍 ':'🧭 '}${esc(r.name)}</div><div class="muted">${km(r.dist)} · ${new Date(r.date).toLocaleDateString('fr-FR')}${r.loop?' · boucle':''}</div>
+    <div class="btns"><button class="btn small" data-a="load">Afficher</button>${r.type==='ride'?'':'<button class="btn small" data-a="link">🔗</button>'}<button class="btn small" data-a="gpx">GPX</button><button class="btn small" data-a="ren">✎</button><button class="btn small" data-a="del">🗑</button></div></div>`).firstChild;
+    d.querySelector('[data-a=load]').onclick=()=>{
+      if(r.type==='ride'){rideLayer.clearLayers();L.polyline(r.coords,{color:'#2563eb',weight:4}).bindPopup(esc(r.name)).addTo(rideLayer);}
+      else{wps=r.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!r.loop;drawWps();
+        if(ways.size)computeRoute();else{routeLayer.clearLayers();L.polyline(r.coords,{color:'#e11d8f',weight:5}).addTo(routeLayer);}
+        ensureTiles(tilesIn(L.latLngBounds(r.coords.length?r.coords:r.wps).pad(0.05)),false,'Chemins');}
+      map.fitBounds(L.latLngBounds(r.coords.length?r.coords:r.wps).pad(0.1));if(isTouch)collapse(true);};
+    const lk=d.querySelector('[data-a=link]');if(lk)lk.onclick=()=>{wps=r.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!r.loop;drawWps();$('bLink').onclick();};
+    d.querySelector('[data-a=gpx]').onclick=()=>shareFile(slug(r.name)+'.gpx',gpx(r.name,r.coords,r.wps,r.times));
+    d.querySelector('[data-a=ren]').onclick=()=>{const t=d.querySelector('.t');t.innerHTML=`<input type="text" value="${esc(r.name)}">`;const inp=t.querySelector('input');inp.focus();
+      const ok=()=>{const x=saved();x[i].name=inp.value.trim()||r.name;LS.set('pq_routes',x);renderSaved();};inp.onblur=ok;inp.onkeydown=e=>{if(e.key==='Enter')ok();};};
+    d.querySelector('[data-a=del]').onclick=()=>{const b=d.querySelector('[data-a=del]');if(b.dataset.c){const x=saved();x.splice(i,1);LS.set('pq_routes',x);renderSaved();}else{b.dataset.c=1;b.textContent='Confirmer ?';setTimeout(()=>{if(b.isConnected){delete b.dataset.c;b.textContent='🗑';}},3000);}};
+    box.appendChild(d);
+  });
+}
+$('bSave').onclick=()=>{
+  if(!lastRoute||lastRoute.coords.length<2){toast('Trace d’abord un itinéraire.');return;}
+  $('saveBox').innerHTML=`<input type="text" id="rName" placeholder="Nom de l'itinéraire" value="Balade ${new Date().toLocaleDateString('fr-FR')} – ${km(lastRoute.dist)}"><div class="btns"><button class="btn small acc" id="rOk">Enregistrer</button><button class="btn small" id="rNo">Annuler</button></div>`;
+  $('rName').focus();$('rName').select();
+  const ok=()=>{const name=$('rName').value.trim()||'Itinéraire';
+    if(addSaved({type:'route',name,date:Date.now(),dist:lastRoute.dist,loop:$('loop').checked,wps:wps.map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)]),coords:lastRoute.coords.map(c=>[+c[0].toFixed(6),+c[1].toFixed(6)])}))toast('Itinéraire enregistré sur cet appareil.');
+    $('saveBox').innerHTML='';};
+  $('rOk').onclick=ok;$('rName').onkeydown=e=>{if(e.key==='Enter')ok();};$('rNo').onclick=()=>$('saveBox').innerHTML='';
+};
+$('bExport').onclick=()=>shareFile('pistes-quad-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({v:2,routes:saved(),notes,prefs:LS.get('pq_prefs',{})}),'application/json');
+$('jsonIn').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const j=JSON.parse(await f.text());if(!j.routes&&!j.notes)throw new Error('fichier non reconnu');
+    const cur=saved(),seen=new Set(cur.map(r=>r.date+r.name));const add=(j.routes||[]).filter(r=>!seen.has(r.date+r.name));
+    LS.set('pq_routes',add.concat(cur));
+    let nn=0;for(const id in j.notes||{}){if(!notes[id]||(j.notes[id].d||0)>(notes[id].d||0)){notes[id]=j.notes[id];nn++;}}LS.set('pq_notes',notes);
+    for(const w of ways.values()){const c=w.cat;classifyWay(w);if(c!==w.cat)drawWay(w);}graphDirty=true;
+    renderSaved();updateInfo();toast(`Importé : ${add.length} tracé(s), ${nn} note(s) de chemins.`,4500);
+  }catch(err){toast('Import impossible : '+err.message);}
+  e.target.value='';
+};
+$('gpxIn').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{const doc=new DOMParser().parseFromString(await f.text(),'application/xml');
+    const pts=[...doc.querySelectorAll('trkpt,rtept')].map(p=>[+p.getAttribute('lat'),+p.getAttribute('lon')]).filter(p=>p.every(isFinite));
+    if(pts.length<2)throw new Error('aucun point');
+    const pl=L.polyline(pts,{color:'#0ea5e9',weight:4,dashArray:'8 6'}).bindPopup(esc(f.name)).addTo(importLayer);
+    map.fitBounds(pl.getBounds());toast(`GPX importé (${pts.length} points).`);
+    if(isTouch)collapse(true);
+  }catch(err){toast('GPX illisible : '+err.message);}
+  e.target.value='';
+};
+$('bClearImp').onclick=()=>{importLayer.clearLayers();rideLayer.clearLayers();};
+
+/* ====================================================================
+   PROFIL ALTIMÉTRIQUE (IGN)
+   ==================================================================== */
+$('bElev').onclick=async()=>{
+  if(!lastRoute||!lastRoute.cum){toast('Pas d’itinéraire.');return;}
+  const c=lastRoute.coords,cum=lastRoute.cum,tot=cum[cum.length-1];
+  const N=Math.min(150,c.length),pts=[],dx=[];let i=0;
+  for(let k=0;k<N;k++){const tg=tot*k/(N-1);while(i<cum.length-1&&cum[i]<tg)i++;pts.push(c[i]);dx.push(cum[i]);}
+  $('profile').innerHTML='<div class="muted">Calcul du profil…</div>';
+  try{
+    const url='https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json?resource=ign_rge_alti_wld&delimiter=|&zonly=true&lon='+pts.map(p=>p[1].toFixed(6)).join('|')+'&lat='+pts.map(p=>p[0].toFixed(6)).join('|');
+    const j=await(await fetch(url)).json();
+    let z=j.elevations||[];if(z.length&&typeof z[0]==='object')z=z.map(o=>o.z);
+    z=z.map(Number);if(z.length!==pts.length||z.some(v=>!isFinite(v)||v<-1000))throw new Error('réponse inattendue');
+    let up=0,down=0;for(let k=1;k<z.length;k++){const d=z[k]-z[k-1];if(d>0)up+=d;else down-=d;}
+    const mn=Math.min(...z),mx=Math.max(...z),W=600,H=110,T=dx[dx.length-1]||1;
+    const path=z.map((v,k)=>`${(dx[k]/T*W).toFixed(1)},${(H-8-(v-mn)/((mx-mn)||1)*(H-24)).toFixed(1)}`).join(' L');
+    $('profile').innerHTML=`<div class="muted">Altitude ${Math.round(mn)} à ${Math.round(mx)} m · D+ ${Math.round(up)} m · D− ${Math.round(down)} m</div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="M0,${H} L${path} L${W},${H} Z" fill="#e11d8f33" stroke="#e11d8f" stroke-width="2"/></svg>`;
+  }catch(err){$('profile').innerHTML='<div class="muted">Profil indisponible ('+esc(err.message)+').</div>';}
+};
+
+/* ====================================================================
+   HORS-LIGNE : préchargement du fond IGN
+   ==================================================================== */
+let offAbort=false;
+function tileXY(lat,lon,z){const n=2**z,x=Math.floor((lon+180)/360*n),r=lat*Math.PI/180,y=Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n);return[x,y];}
+$('bOffline').onclick=async()=>{
+  const base=BASES[curBase];
+  if(!base._ign){toast('Choisis d’abord un fond IGN (Plan ou Photos) : les autres serveurs interdisent le téléchargement en masse.',5000);return;}
+  if(!('serviceWorker'in navigator)||!navigator.serviceWorker.controller){toast('Hors-ligne disponible seulement quand l’appli est en ligne sur un site https (et après un rechargement).',5000);return;}
+  const b=map.getBounds(),urls=[];
+  for(let z=Math.max(12,Math.min(map.getZoom(),16)-4);z<=16;z++){
+    const[x0,y0]=tileXY(b.getNorth(),b.getWest(),z),[x1,y1]=tileXY(b.getSouth(),b.getEast(),z);
+    for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)urls.push(base.getTileUrl({x,y,z}));
+  }
+  if(urls.length>4000){toast(`Zone trop grande (${urls.length} images). Zoome un peu.`);return;}
+  const box=$('offProg');box.innerHTML=`<div class="muted">${urls.length} images (~${Math.round(urls.length*0.02)} Mo)…</div><div class="prog"><div></div></div><button class="btn small" id="offStop">Arrêter</button>`;
+  $('offStop').onclick=()=>offAbort=true;offAbort=false;
+  let done=0,fail=0,idx=0;const bar=box.querySelector('.prog div');
+  const worker=async()=>{while(idx<urls.length&&!offAbort){const u=urls[idx++];try{const r=await fetch(u,{mode:'cors'});if(!r.ok)fail++;}catch(e){fail++;}done++;if(done%10===0)bar.style.width=(done/urls.length*100)+'%';}};
+  await Promise.all([worker(),worker(),worker(),worker()]);
+  ensureTiles(viewTiles(0),false,'Chemins');
+  box.innerHTML=`<div class="muted">${offAbort?'Arrêté':'Terminé'} : ${done-fail} images enregistrées${fail?', '+fail+' échecs':''}. Les chemins de la zone sont aussi en mémoire.</div>`;
+};
+$('bWipe').onclick=async()=>{
+  const b=$('bWipe');if(!b.dataset.c){b.dataset.c=1;b.textContent='Confirmer : tout vider ?';setTimeout(()=>{delete b.dataset.c;b.textContent='🗑 Vider le cache';},3500);return;}
+  await DB.clear();try{await caches.delete('pq-tiles');}catch(e){}
+  toast('Cache vidé (tes tracés et notes sont conservés).');delete b.dataset.c;b.textContent='🗑 Vider le cache';
+};
+
+/* ====================================================================
+   INTERFACE
+   ==================================================================== */
+function setMode(m){mode=m;$('mExplore').classList.toggle('on',m==='explore');$('mTrace').classList.toggle('on',m==='trace');map.getContainer().classList.toggle('trace',m==='trace');map.closePopup();
+  if(m==='trace')toast(ways.size?'Touche la carte pour poser des points.':'Pose tes points : les chemins se chargent dès que tu es assez zoomé.');}
+$('mExplore').onclick=()=>setMode('explore');$('mTrace').onclick=()=>setMode('trace');
+function collapse(c){const p=$('panel');p.classList.toggle('collapsed',c);p.classList.remove('full');$('toggle').textContent=c?'▴':'▾';document.body.classList.toggle('pOpen',!c);setTimeout(()=>map.invalidateSize(),250);}
+function showPane(id){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.p===id));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id===id));collapse(false);}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{if(t.classList.contains('on')&&!$('panel').classList.contains('collapsed')&&isTouch){$('panel').classList.toggle('full');return;}showPane(t.dataset.p);});
+$('toggle').onclick=()=>collapse(!$('panel').classList.contains('collapsed'));
+L.DomEvent.disableClickPropagation($('panel'));L.DomEvent.disableScrollPropagation($('panel'));
+L.DomEvent.disableClickPropagation($('top'));L.DomEvent.disableClickPropagation($('searchBox'));
+
+function swatch(k){const c=CATS[k];return `<span class="sw" style="border-color:${c.color};${c.dash?'border-top-style:dashed':''}"></span>`;}
+function buildControls(){
+  const rc=$('routeCats');rc.innerHTML='';
+  for(const k in CATS){if(CATS[k].locked)continue;
+    const lab=el(`<label class="row"><input type="checkbox" ${CATS[k].route?'checked':''}> ${swatch(k)} ${CATS[k].label}</label>`).firstChild;
+    lab.querySelector('input').onchange=e=>{CATS[k].route=e.target.checked;graphDirty=true;savePrefs();scheduleRoute();
+      if(k==='agri'&&e.target.checked)toast('« Sauf agricole » vise l’usage agricole : vérifie en mairie avant d’y passer en balade.',6000);};
+    rc.appendChild(lab);}
+  rc.appendChild(el(`<div class="muted">${swatch('mine')} Tes chemins vérifiés sont toujours utilisés et favorisés · ${swatch('no')} jamais les interdits.</div>`));
+  const dc=$('dispCats');dc.innerHTML='';
+  for(const k in CATS){const lab=el(`<label class="row"><input type="checkbox" ${CATS[k].show?'checked':''}> ${swatch(k)} ${CATS[k].label}</label>`).firstChild;
+    lab.querySelector('input').onchange=e=>{CATS[k].show=e.target.checked;syncVisibility();savePrefs();};dc.appendChild(lab);}
+  $('legend').innerHTML=Object.keys(CATS).map(k=>`<div class="row">${swatch(k)} ${CATS[k].label}</div>`).join('')+`<div class="row"><span class="sw" style="border-color:#e11d8f;border-top-width:6px"></span> Ton itinéraire</div><div class="row"><span class="sw" style="border-color:#2563eb"></span> Ta sortie enregistrée</div>`;
+  const bs=$('bases');bs.innerHTML='';
+  for(const n in BASES){const lab=el(`<label class="row"><input type="radio" name="base" ${n===curBase?'checked':''}> ${n}</label>`).firstChild;
+    lab.querySelector('input').onchange=()=>{map.removeLayer(BASES[curBase]);curBase=n;BASES[n].addTo(map);BASES[n].bringToBack();savePrefs();};bs.appendChild(lab);}
+}
+$('cadastre').onchange=e=>e.target.checked?cadastre.addTo(map):map.removeLayer(cadastre);
+$('showBarriers').onchange=syncVisibility;$('showAreas').onchange=syncVisibility;
+$('showForests').onchange=e=>e.target.checked?forestLayer.addTo(map):map.removeLayer(forestLayer);
+$('autoLoad').onchange=()=>{savePrefs();autoLoad();};
+
+$('toast').onclick=()=>{$('toast').style.display='none';if(/Aide|serveurs|zone/.test($('toast').textContent))showPane('pHelp');};
+$('srv').value=prefs.server||'';
+$('srv').onchange=()=>{prefs.server=$('srv').value.trim();const p=LS.get('pq_prefs',{});p.server=prefs.server;LS.set('pq_prefs',p);cooldown.clear();toast(prefs.server?'Serveur personnalisé utilisé en premier.':'Serveurs automatiques.');};
+$('bDiag').onclick=async()=>{
+  const box=$('diag');box.innerHTML='<div class="muted">Test en cours (jusqu’à 30 s)…</div>';
+  const line=(ok,name,txt)=>`<div class="item" style="padding:6px 10px">${ok?'✅':'❌'} <b>${esc(name)}</b> : ${esc(txt)}</div>`;
+  let html=`<div class="muted">${navigator.onLine?'Appareil en ligne':'⚠️ Appareil hors ligne'} · ${esc(location.protocol)} · ${new Date().toLocaleTimeString('fr-FR')}</div>`;
+  const q='[out:json][timeout:15];way["highway"="track"](50.01,4.04,50.02,4.06);out ids 5;';
+  for(const u of servers()){
+    const t0=performance.now();
+    try{const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),25000);
+      const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ctl.signal});clearTimeout(to);
+      const ms=Math.round(performance.now()-t0);
+      if(r.ok){const j=await r.json();html+=line(true,SERVER_NAME(u),`OK en ${ms} ms (${(j.elements||[]).length} chemins test)`);cooldown.delete(u);}
+      else html+=line(false,SERVER_NAME(u),'HTTP '+r.status+(r.status===429?' : trop de requêtes, attendre 1 min':r.status>=500?' : serveur surchargé':''));
+    }catch(e){html+=line(false,SERVER_NAME(u),e.name==='AbortError'?'délai dépassé (25 s)':'bloqué ou injoignable ('+(e.message||e.name)+')');}
+    box.innerHTML=html;
+  }
+  try{const r=await fetch('https://data.geopf.fr/geocodage/search?q=Fourmies&limit=1');html+=line(r.ok,'IGN (recherche, altitude)',r.ok?'OK':'HTTP '+r.status);}catch(e){html+=line(false,'IGN','injoignable ('+(e.message||e.name)+')');}
+  try{const r=await fetch('manifest.webmanifest',{cache:'no-store'});html+=line(r.ok,'Ton hébergement (fichier local)',r.ok?'OK':'HTTP '+r.status);}catch(e){html+=line(false,'Ton hébergement','injoignable');}
+  html+=`<div class="muted">Adresse de la page : ${esc(location.href.split('#')[0])}<br>Mode : ${matchMedia('(display-mode: standalone)').matches?'appli installée (écran d’accueil)':'navigateur'} · ${esc(navigator.userAgent.match(/(iPhone OS [\d_]+|Android [\d.]+|Windows NT [\d.]+|Mac OS X [\d_]+)/)?.[0]||'')}</div>`;
+  if(cspHits.length){const h=cspHits[cspHits.length-1];
+    html+=`<div class="warn"><b>Cause trouvée : la politique de sécurité (CSP) de ton hébergement bloque les appels.</b><br>Règle bloquante : ${esc(h.d)} → ${esc(h.u)}<br><br>Politique reçue :<br><code style="font-size:11px;word-break:break-all">${esc((h.p||'').slice(0,600))}</code></div>`;}
+  else html+=`<div class="info">Aucune règle de sécurité de l’hébergement détectée. Si tout est ❌, le blocage vient du téléphone ou du réseau : bloqueur de publicité / contenu Safari, VPN, contrôle parental, ou filtrage de la box.</div>`;
+  html+=line(!!staticIdx,'Données intégrées à l’appli',staticIdx?`${staticIdx.keys.size} zones, du ${new Date(staticIdx.date).toLocaleDateString('fr-FR')}`:'absentes (publication GitHub pas encore faite ?)');
+  html+=`<div class="muted">Zones en mémoire : ${loadedTiles.size} · voies : ${ways.size}</div>`;
+  box.innerHTML=html;
+};
+
+/* raccourcis clavier (PC) */
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea')){if(e.key==='Escape'){e.target.blur();$('searchBox').style.display='none';}return;}
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key.toLowerCase();
+  if(k==='e')setMode('explore');else if(k==='t')setMode('trace');
+  else if(k==='z'||k==='backspace'){e.preventDefault();$('bUndo').onclick();}
+  else if(k==='f'){e.preventDefault();$('searchBox').style.display='block';$('q').focus();}
+  else if(k==='g')$('bGps').onclick();else if(k==='l')manualLoad(false);else if(k==='b')genLoop(false);
+  else if(k==='escape'){map.closePopup();$('searchBox').style.display='none';}
+});
+
+/* ====================================================================
+   DÉMARRAGE
+   ==================================================================== */
+(function init(){
+  if(prefs.auto===false)$('autoLoad').checked=false;
+  if(prefs.pref)$('pref').value=prefs.pref;
+  if(prefs.loopKm){$('loopKm').value=prefs.loopKm;$('loopKmV').textContent=prefs.loopKm+' km';}
+  if(prefs.noReuse===false)$('noReuse').checked=false;
+  buildControls();renderSaved();updateInfo();syncVisibility();
+  if(isTouch)collapse(true);else document.body.classList.add('pOpen');
+  const got=readHash();
+  if(!got){const d=LS.get('pq_draft',null);if(d&&d.wps&&d.wps.length){wps=d.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!d.loop;drawWps();}}
+  const r=LS.get('pq_ride',null);
+  if(r&&r.pts&&r.pts.length&&Date.now()-r.t0<12*3600e3){toast('Balade en cours récupérée.',3000);startRide(r);showPane('pRide');}
+  autoLoad();
+  if(!LS.get('pq_seen',false)){LS.set('pq_seen',true);setTimeout(()=>toast('Bienvenue ! Zoome sur ta zone : les chemins se chargent tout seuls. Aide dans l’onglet ❓',6000),700);}
+  if('serviceWorker'in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if(location.protocol==='file:')setTimeout(()=>toast('Ouvert depuis un fichier : tout marche sauf le hors-ligne et parfois le GPS. Mets-le en ligne pour en profiter à 100 %.',6000),7000);
+})();
+</script>
+</body>
+</html>
