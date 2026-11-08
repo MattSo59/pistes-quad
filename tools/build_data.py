@@ -126,10 +126,21 @@ def main(pbf, outdir):
     tiler = Tiler()
 
     # Passe 2 : chemins, barrières, forêts (avec coordonnées)
+    wkb = osmium.geom.WKBFactory()
+
     class MainPass(osmium.SimpleHandler):
         def __init__(self):
             super().__init__()
             self.member_geom = {}
+            self.woods = []
+
+        def area(self, a):
+            # tous les bois et forêts (pour repérer les chemins forestiers)
+            if a.tags.get('landuse') == 'forest' or a.tags.get('natural') == 'wood':
+                try:
+                    self.woods.append(wkb.create_multipolygon(a))
+                except Exception:
+                    pass
 
         def node(self, n):
             if 'barrier' in n.tags and n.location.valid():
@@ -165,6 +176,19 @@ def main(pbf, outdir):
                 lines.append(g)
         if lines:
             tiler.add_forest({"type": "relation", "id": rid, "tags": t, "members": members}, lines)
+
+    # chemins en forêt / bois
+    try:
+        import shapely
+        import cadastre
+        polys = [shapely.from_wkb(bytes.fromhex(h)) for h in mp.woods]
+        flags = cadastre.inside_flags({k: v[1] for k, v in tiler.tracks.items()}, polys)
+        for wid in flags:
+            tiler.tracks[wid][0]['tags']['_bois'] = '1'
+        tiler.counts['en_bois'] = len(flags)
+        print(len(polys), 'bois/forêts,', len(flags), 'chemins en forêt')
+    except Exception as ex:
+        print('::warning::Repérage des bois impossible :', repr(ex)[:300])
 
     depts = os.environ.get('CADASTRE_DEPTS', '').split()
     bbox = os.environ.get('BBOX')  # ouest,sud,est,nord

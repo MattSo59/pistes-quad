@@ -120,3 +120,26 @@ def classify(ways_coords, polys, inner=4.0):
         f = inside.get(wid, 0) / n
         out[wid] = "parcelle" if f >= 0.6 else ("libre" if f <= 0.15 else "mixte")
     return out
+
+
+def inside_flags(ways_coords, polys, min_frac=0.5):
+    """{id: coords} -> {id: True} pour les chemins dont au moins `min_frac` des points sont dans un polygone."""
+    import numpy as np
+    import shapely
+    if not polys or not ways_coords:
+        return {}
+    ids, xs, ys = [], [], []
+    for wid, cs in ways_coords.items():
+        for la, lo in sample_line(cs, 25.0):
+            ids.append(wid); xs.append(lo); ys.append(la)
+    pts = shapely.points(np.array(xs), np.array(ys))
+    tree = shapely.STRtree(np.array(polys, dtype=object))
+    pi, _ = tree.query(pts, predicate="within")
+    inside = np.zeros(len(pts), dtype=bool)
+    inside[pi] = True
+    tot, ins = {}, {}
+    for k, wid in enumerate(ids):
+        tot[wid] = tot.get(wid, 0) + 1
+        if inside[k]:
+            ins[wid] = ins.get(wid, 0) + 1
+    return {wid: True for wid, n in tot.items() if ins.get(wid, 0) / n >= min_frac}
