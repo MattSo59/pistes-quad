@@ -196,6 +196,22 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
 #svModal iframe{flex:1;border:0;width:100%;background:#000}
 #svModal .svb{display:grid;grid-template-columns:56px 1fr 1fr 56px;gap:8px;padding:10px}
 #back{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + var(--sb));z-index:1150;border-radius:16px;padding:12px 14px;display:none;gap:8px;align-items:center;font-weight:700;max-width:94vw}
+/* historique */
+#histStrip{display:flex;gap:8px;overflow-x:auto;margin:0 -14px 12px;padding:2px 14px 4px;scrollbar-width:none}
+#histStrip::-webkit-scrollbar{display:none}
+.hc{flex:0 0 auto;width:112px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px;cursor:pointer;position:relative;color:var(--fg);text-align:left;font-family:inherit}
+.hc.cur{border-color:var(--orange);box-shadow:0 0 0 2px rgba(255,122,26,.35)}
+.hc svg.mini{width:100%;height:58px;display:block;background:var(--bg2);border-radius:9px}
+.hc b{display:block;font-size:13px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc span{font-size:11.5px;color:var(--muted)}
+.hc .st{position:absolute;top:8px;right:9px;font-size:13px}
+.hc.new{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--orange);font-weight:800;border-style:dashed;min-height:100px}
+.hi{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.hi:first-child{border-top:0}
+.hi svg.mini{width:64px;height:46px;flex:0 0 auto;background:var(--bg2);border-radius:8px}
+.hi .tx{flex:1;min-width:0}.hi .tx b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hi .tx span{font-size:12.5px;color:var(--muted)}
+.hi .acts{display:flex;gap:5px}.hi .acts button{width:36px;height:36px;border-radius:10px;background:var(--card2);border:1px solid var(--line);color:#fff;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+.hi.cur .tx b{color:var(--orange)}
 /* accueil */
 #welcome{position:fixed;inset:0;z-index:2000;background:rgba(5,10,22,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + var(--sb))}
 @media (min-width:761px){#welcome{align-items:center}}
@@ -285,6 +301,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
   <!-- ============ TRACÉ ============ -->
   <div class="pane on" id="pRoute">
     <div id="loadErr"></div>
+    <div id="histStrip"></div>
     <section class="card hero">
       <div class="hero-t"><div class="badge"><svg class="ic"><use href="#i-wand"/></svg></div><div><b>Boucle automatique</b><span>Le maximum de chemins verts, au départ du point D, de ta position ou du centre de la carte.</span></div></div>
       <div class="chips" id="kmChips"><button data-km="15">15 km</button><button data-km="25">25 km</button><button data-km="40">40 km</button><button data-km="60">60 km</button></div>
@@ -301,7 +318,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
         <button class="btn" id="bClear"><svg class="ic"><use href="#i-trash"/></svg>Effacer</button>
       </div>
       <div class="actions">
-        <button class="btn acc" id="bSave"><svg class="ic"><use href="#i-save"/></svg>Garder</button>
+        <button class="btn acc" id="bSave"><svg class="ic"><use href="#i-saved"/></svg>Favori</button>
         <button class="btn" id="bGpx"><svg class="ic"><use href="#i-share"/></svg>GPX</button>
         <button class="btn" id="bLink"><svg class="ic"><use href="#i-link"/></svg>Envoyer</button>
         <button class="btn" id="bElev"><svg class="ic"><use href="#i-mount"/></svg>Profil</button>
@@ -390,7 +407,20 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
 
   <!-- ============ MES TRACÉS ============ -->
   <div class="pane" id="pSaved">
-    <div id="savedList" class="muted">Rien d'enregistré pour l'instant.</div>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-saved"/></svg>Favoris ⭐</div>
+      <div id="favList"></div>
+      <label class="row" style="margin-top:6px"><input type="checkbox" id="showFavs"> Afficher tous mes favoris sur la carte</label>
+    </section>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-loop"/></svg>Historique (automatique)</div>
+      <div class="muted" style="margin-bottom:6px">Chaque itinéraire créé ou modifié est gardé ici. Les 30 plus récents restent ; les favoris ne s'effacent jamais.</div>
+      <div id="recList"></div>
+    </section>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-ride"/></svg>Sorties enregistrées</div>
+      <div id="savedList" class="muted">Aucune sortie pour l'instant (onglet Balade).</div>
+    </section>
     <section class="card">
       <div class="card-h"><svg class="ic"><use href="#i-saved"/></svg>Chemins que j'ai notés</div>
       <div class="muted" id="notesInfo"></div>
@@ -444,7 +474,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v6.1</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v7</div>
   </div>
 
   </div>
@@ -1042,7 +1072,7 @@ function computeRoute(){
     for(const t of r.tr)L.polyline(t.coords,{color:CATS[t.cat].color,weight:3.5,interactive:false}).addTo(routeLayer);
     const cum=[0];for(let i=1;i<r.coords.length;i++)cum.push(cum[i-1]+hav(r.coords[i-1],r.coords[i]));r.cum=cum;
   }
-  lastRoute=r;showStats();drawEntries();renderRoadbook();saveDraft();
+  lastRoute=r;showStats();drawEntries();renderRoadbook();saveDraft();clearTimeout(histT);histT=setTimeout(histUpsert,1200);
 }
 function showStats(msg){
   const box=$('stats');
@@ -1085,7 +1115,7 @@ function drawWps(){
   });
 }
 $('bUndo').onclick=()=>{wps.pop();drawWps();scheduleRoute();};
-$('bClear').onclick=()=>{wps=[];drawWps();scheduleRoute();$('profile').innerHTML='';$('bGen2').disabled=true;};
+$('bClear').onclick=()=>{curId=null;LS.set('pq_cur',null);renderHist();wps=[];drawWps();scheduleRoute();$('profile').innerHTML='';$('bGen2').disabled=true;};
 $('bRev').onclick=()=>{wps.reverse();drawWps();scheduleRoute();};
 $('loop').onchange=scheduleRoute;
 $('noReuse').onchange=()=>{savePrefs();scheduleRoute();};
@@ -1128,6 +1158,7 @@ async function genLoop(again){
   }
   chip(null);$('bGen').disabled=false;
   if(!best){toast('Pas de boucle trouvée : réseau trop coupé ici. Essaie une autre distance ou un autre départ.',5000);return;}
+  curId=null;
   wps=best.r.sn.slice(0,best.n+1).map(id=>L.latLng(nodes.get(id)));
   $('loop').checked=true;drawWps();computeRoute();
   $('bGen2').disabled=false;
@@ -1274,54 +1305,127 @@ function readHash(){
   const m=location.hash.match(/#r=([^&]+)(&b=1)?/);if(!m)return false;
   const pts=m[1].split(';').map(s=>s.split(',').map(Number)).filter(p=>p.length===2&&p.every(isFinite));
   if(pts.length<2)return false;
-  wps=pts.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!m[2];drawWps();
+  curId=null;wps=pts.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!m[2];drawWps();
   map.fitBounds(L.latLngBounds(pts).pad(0.15));
   ensureTiles(tilesIn(L.latLngBounds(pts).pad(0.15)),false,'Itinéraire reçu');
   history.replaceState(null,'',location.pathname+location.search);
   toast('Itinéraire reçu : calcul dès que les chemins sont chargés.',4000);return true;
 }
 
-function saved(){return LS.get('pq_routes',[]);}
-function addSaved(r){const l=saved();l.unshift(r);if(!LS.set('pq_routes',l)){toast('Stockage plein : supprime d’anciens tracés ou exporte-les.',5000);return false;}renderSaved();return true;}
+/* ---- Sorties enregistrées (balades GPS) ---- */
+function saved(){return LS.get('pq_routes',[]).filter(r=>r.type==='ride');}
+function addSaved(r){const l=LS.get('pq_routes',[]);l.unshift(r);if(!LS.set('pq_routes',l)){toast('Stockage plein : supprime d’anciennes sorties.',5000);return false;}renderSaved();return true;}
 function renderSaved(){
   const l=saved(),box=$('savedList');
-  if(!l.length){box.className='muted';box.textContent='Rien d’enregistré pour l’instant.';return;}
+  if(!l.length){box.className='muted';box.textContent='Aucune sortie pour l’instant (onglet Balade).';return;}
   box.className='';box.innerHTML='';
-  l.forEach((r,i)=>{
-    const d=el(`<div class="item"><div class="t">${r.type==='ride'?'🏍 ':'🧭 '}${esc(r.name)}</div><div class="muted">${km(r.dist)} · ${new Date(r.date).toLocaleDateString('fr-FR')}${r.loop?' · boucle':''}</div>
-    <div class="btns"><button class="btn small" data-a="load">Afficher</button>${r.type==='ride'?'':'<button class="btn small" data-a="link">🔗</button>'}<button class="btn small" data-a="gpx">GPX</button><button class="btn small" data-a="ren">✎</button><button class="btn small" data-a="del">🗑</button></div></div>`).firstChild;
-    d.querySelector('[data-a=load]').onclick=()=>{
-      if(r.type==='ride'){rideLayer.clearLayers();L.polyline(r.coords,{color:'#5b9bff',weight:4}).bindPopup(esc(r.name)).addTo(rideLayer);}
-      else{wps=r.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!r.loop;drawWps();
-        if(ways.size)computeRoute();else{routeLayer.clearLayers();L.polyline(r.coords,{color:'#ff7a1a',weight:5}).addTo(routeLayer);}
-        ensureTiles(tilesIn(L.latLngBounds(r.coords.length?r.coords:r.wps).pad(0.05)),false,'Chemins');}
-      map.fitBounds(L.latLngBounds(r.coords.length?r.coords:r.wps).pad(0.1));if(isTouch)collapse(true);};
-    const lk=d.querySelector('[data-a=link]');if(lk)lk.onclick=()=>{wps=r.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!r.loop;drawWps();$('bLink').onclick();};
-    d.querySelector('[data-a=gpx]').onclick=()=>shareFile(slug(r.name)+'.gpx',gpx(r.name,r.coords,r.wps,r.times));
-    d.querySelector('[data-a=ren]').onclick=()=>{const t=d.querySelector('.t');t.innerHTML=`<input type="text" value="${esc(r.name)}">`;const inp=t.querySelector('input');inp.focus();
-      const ok=()=>{const x=saved();x[i].name=inp.value.trim()||r.name;LS.set('pq_routes',x);renderSaved();};inp.onblur=ok;inp.onkeydown=e=>{if(e.key==='Enter')ok();};};
-    d.querySelector('[data-a=del]').onclick=()=>{const b=d.querySelector('[data-a=del]');if(b.dataset.c){const x=saved();x.splice(i,1);LS.set('pq_routes',x);renderSaved();}else{b.dataset.c=1;b.textContent='Confirmer ?';setTimeout(()=>{if(b.isConnected){delete b.dataset.c;b.textContent='🗑';}},3000);}};
+  l.forEach(r=>{
+    const d=el(`<div class="hi">${miniSVG(r.coords,'#5b9bff')}<div class="tx"><b>${esc(r.name)}</b><span>${km(r.dist)} · ${new Date(r.date).toLocaleDateString('fr-FR')}</span></div>
+      <div class="acts"><button data-a="load" title="Afficher">👁</button><button data-a="gpx" title="GPX">⤴</button><button data-a="del" title="Supprimer">🗑</button></div></div>`).firstChild;
+    d.querySelector('[data-a=load]').onclick=()=>{rideLayer.clearLayers();L.polyline(r.coords,{color:'#5b9bff',weight:4}).bindPopup(esc(r.name)).addTo(rideLayer);map.fitBounds(L.latLngBounds(r.coords).pad(0.1));if(isTouch)collapse(true);};
+    d.querySelector('[data-a=gpx]').onclick=()=>shareFile(slug(r.name)+'.gpx',gpx(r.name,r.coords,[],r.times));
+    confirmDel(d.querySelector('[data-a=del]'),()=>{LS.set('pq_routes',LS.get('pq_routes',[]).filter(x=>x!==r&&!(x.date===r.date&&x.name===r.name)));renderSaved();});
     box.appendChild(d);
   });
 }
+function confirmDel(b,fn){b.onclick=()=>{if(b.dataset.c){fn();}else{b.dataset.c=1;b.textContent='✓?';b.style.background='#b91c1c';setTimeout(()=>{if(b.isConnected){delete b.dataset.c;b.textContent='🗑';b.style.background='';}},3000);}};}
+
+/* ---- Historique automatique + favoris ---- */
+function simplifyCs(cs){if(!cs||!cs.length)return[];const st=Math.max(1,Math.floor(cs.length/160));return cs.filter((c,i)=>i%st===0||i===cs.length-1).map(c=>[+(+c[0]).toFixed(5),+(+c[1]).toFixed(5)]);}
+function miniSVG(cs,col){
+  if(!cs||cs.length<2)return`<svg class="mini" viewBox="0 0 100 70"></svg>`;
+  let s=90,n=-90,w=180,e=-180;for(const c of cs){if(c[0]<s)s=c[0];if(c[0]>n)n=c[0];if(c[1]<w)w=c[1];if(c[1]>e)e=c[1];}
+  const k=Math.cos(((s+n)/2)*Math.PI/180),dx=(e-w)*k||1e-6,dy=(n-s)||1e-6,sc=Math.min(86/dx,56/dy),ox=(100-dx*sc)/2,oy=(70-dy*sc)/2;
+  const d=cs.map((c,i)=>(i?'L':'M')+(ox+(c[1]-w)*k*sc).toFixed(1)+','+(oy+(n-c[0])*sc).toFixed(1)).join('');
+  return`<svg class="mini" viewBox="0 0 100 70"><path d="${d}" fill="none" stroke="${col||'#ff7a1a'}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+let hist=LS.get('pq_hist',null);
+if(!hist){hist=[];for(const r of LS.get('pq_routes',[]))if(r.type!=='ride')hist.push({id:'h'+r.date,name:r.name,date:r.date,upd:r.date,pin:true,dist:r.dist,green:null,loop:!!r.loop,wps:r.wps,prev:simplifyCs(r.coords)});
+  LS.set('pq_hist',hist);LS.set('pq_routes',LS.get('pq_routes',[]).filter(r=>r.type==='ride'));}
+let curId=LS.get('pq_cur',null),histT=null;
+function saveHist(){
+  const pins=hist.filter(h=>h.pin),rec=hist.filter(h=>!h.pin).sort((a,b)=>b.upd-a.upd).slice(0,30);
+  hist=pins.concat(rec).sort((a,b)=>b.upd-a.upd);
+  if(!LS.set('pq_hist',hist)){hist=pins.concat(rec.slice(0,10));LS.set('pq_hist',hist);}
+  LS.set('pq_cur',curId);renderHist();drawFavs();
+}
+const hDate=t=>{const d=new Date(t),now=new Date();const same=d.toDateString()===now.toDateString();return same?'auj. '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});};
+function autoName(h){return(h.loop?'Boucle ':'Itinéraire ')+Math.round(h.dist/1000)+' km';}
+function histUpsert(){
+  if(!lastRoute||lastRoute.coords.length<2||wps.length<2)return;
+  let h=curId&&hist.find(x=>x.id===curId);
+  if(!h){h={id:'h'+Date.now(),date:Date.now(),pin:false};curId=h.id;hist.unshift(h);}
+  const autoN=!h.name||h.name===autoName(h);
+  Object.assign(h,{dist:lastRoute.dist,green:lastRoute.dist?lastRoute.green/lastRoute.dist:0,loop:$('loop').checked,wps:wps.map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)]),prev:simplifyCs(lastRoute.coords),upd:Date.now()});
+  if(autoN)h.name=autoName(h);
+  saveHist();
+}
+function loadHist(id){
+  const h=hist.find(x=>x.id===id);if(!h)return;
+  curId=id;LS.set('pq_cur',curId);
+  wps=h.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!h.loop;drawWps();
+  const pts=h.prev&&h.prev.length?h.prev:h.wps;
+  if(ways.size)computeRoute();else{routeLayer.clearLayers();L.polyline(pts,{color:'#ff7a1a',weight:5}).addTo(routeLayer);}
+  ensureTiles(tilesIn(L.latLngBounds(pts).pad(0.05)),false,'Chemins');
+  map.fitBounds(L.latLngBounds(pts).pad(0.1));renderHist();
+}
+function newRoute(){curId=null;LS.set('pq_cur',null);wps=[];drawWps();computeRoute();$('profile').innerHTML='';renderHist();setMode('trace');toast('Nouvel itinéraire : génère une boucle ou touche la carte.',3000);}
+function renameHist(h,after){
+  $('saveBox').innerHTML=`<input type="text" id="rName" value="${esc(h.name)}"><div class="btns"><button class="btn small acc" id="rOk">OK</button><button class="btn small" id="rNo">Annuler</button></div>`;
+  showPane('pRoute');$('rName').focus();$('rName').select();
+  const ok=()=>{h.name=$('rName').value.trim()||h.name;$('saveBox').innerHTML='';if(after)after();saveHist();};
+  $('rOk').onclick=ok;$('rName').onkeydown=e=>{if(e.key==='Enter')ok();};$('rNo').onclick=()=>$('saveBox').innerHTML='';
+}
+function linkFor(h){return location.href.split('#')[0]+'#r='+h.wps.map(p=>(+p[0]).toFixed(5)+','+(+p[1]).toFixed(5)).join(';')+(h.loop?'&b=1':'');}
+function histRow(h){
+  const d=el(`<div class="hi${h.id===curId?' cur':''}">${miniSVG(h.prev,h.pin?'#facc15':'#ff7a1a')}<div class="tx"><b>${h.pin?'⭐ ':''}${esc(h.name)}</b><span>${km(h.dist||0)}${h.green!=null?' · '+Math.round(h.green*100)+' % vert':''} · ${hDate(h.upd||h.date)}</span></div>
+    <div class="acts"><button data-a="pin" title="Favori">${h.pin?'★':'☆'}</button><button data-a="more" title="Plus">⋯</button><button data-a="del" title="Supprimer">🗑</button></div></div>`).firstChild;
+  d.querySelector('.tx').onclick=d.querySelector('svg').onclick=()=>{loadHist(h.id);showPane('pRoute');if(isTouch)collapse(true);};
+  d.querySelector('[data-a=pin]').onclick=()=>{h.pin=!h.pin;if(h.pin&&h.name===autoName(h))renameHist(h);saveHist();};
+  d.querySelector('[data-a=more]').onclick=()=>{
+    const m=el(`<div class="btns" style="margin:4px 0 8px 74px"><button class="btn small" data-b="ren">✎ Renommer</button><button class="btn small" data-b="gpx">GPX</button><button class="btn small" data-b="lnk">🔗 Lien</button><button class="btn small" data-b="dup">⧉ Dupliquer</button></div>`).firstChild;
+    m.querySelector('[data-b=ren]').onclick=()=>renameHist(h);
+    m.querySelector('[data-b=gpx]').onclick=()=>shareFile(slug(h.name)+'.gpx',gpx(h.name,h.prev,h.wps));
+    m.querySelector('[data-b=lnk]').onclick=async()=>{const url=linkFor(h);if(isTouch&&navigator.share){try{await navigator.share({title:h.name,url});return;}catch(e){}}try{await navigator.clipboard.writeText(url);toast('Lien copié.');}catch(e){toast(url,8000);}};
+    m.querySelector('[data-b=dup]').onclick=()=>{const c=JSON.parse(JSON.stringify(h));c.id='h'+Date.now();c.pin=false;c.name=h.name+' (copie)';c.upd=c.date=Date.now();hist.unshift(c);saveHist();loadHist(c.id);};
+    if(d.nextSibling&&d.nextSibling.classList&&d.nextSibling.classList.contains('btns'))d.nextSibling.remove();else d.after(m);
+  };
+  confirmDel(d.querySelector('[data-a=del]'),()=>{hist=hist.filter(x=>x.id!==h.id);if(curId===h.id)curId=null;saveHist();});
+  return d;
+}
+function renderHist(){
+  const favs=hist.filter(h=>h.pin),rec=hist.filter(h=>!h.pin);
+  const fl=$('favList');fl.innerHTML='';favs.forEach(h=>fl.appendChild(histRow(h)));if(!favs.length)fl.innerHTML='<div class="muted">Touche ☆ sur un itinéraire pour le garder ici pour toujours.</div>';
+  const rl=$('recList');rl.innerHTML='';rec.forEach(h=>rl.appendChild(histRow(h)));if(!rec.length)rl.innerHTML='<div class="muted">Rien pour l’instant.</div>';
+  const st=$('histStrip');st.innerHTML='';
+  const nb=el(`<button class="hc new"><svg class="ic"><use href="#i-pencil"/></svg>Nouveau</button>`).firstChild;nb.onclick=newRoute;st.appendChild(nb);
+  hist.slice(0,12).forEach(h=>{const c=el(`<button class="hc${h.id===curId?' cur':''}">${h.pin?'<span class="st">⭐</span>':''}${miniSVG(h.prev,h.pin?'#facc15':'#ff7a1a')}<b>${esc(h.name)}</b><span>${h.green!=null?Math.round(h.green*100)+' % vert · ':''}${hDate(h.upd||h.date)}</span></button>`).firstChild;
+    c.onclick=()=>loadHist(h.id);st.appendChild(c);});
+  if(hist.length>12){const m=el(`<button class="hc new" style="color:var(--blue2)">Tout voir<br>(${hist.length})</button>`).firstChild;m.onclick=()=>showPane('pSaved');st.appendChild(m);}
+}
+const favLayer=L.layerGroup().addTo(map);
+function drawFavs(){favLayer.clearLayers();if(!$('showFavs').checked)return;
+  for(const h of hist.filter(x=>x.pin&&x.id!==curId&&x.prev&&x.prev.length>1))
+    L.polyline(h.prev,{color:'#facc15',weight:4,opacity:.8,dashArray:'8 6'}).bindTooltip('⭐ '+esc(h.name)).on('click',e=>{L.DomEvent.stopPropagation(e);loadHist(h.id);}).addTo(favLayer);}
+$('showFavs').onchange=()=>{drawFavs();if($('showFavs').checked){const pts=hist.filter(h=>h.pin).flatMap(h=>h.prev||[]);if(pts.length)map.fitBounds(L.latLngBounds(pts).pad(0.1));}};
 $('bSave').onclick=()=>{
   if(!lastRoute||lastRoute.coords.length<2){toast('Trace d’abord un itinéraire.');return;}
-  $('saveBox').innerHTML=`<input type="text" id="rName" placeholder="Nom de l'itinéraire" value="Balade ${new Date().toLocaleDateString('fr-FR')} – ${km(lastRoute.dist)}"><div class="btns"><button class="btn small acc" id="rOk">Enregistrer</button><button class="btn small" id="rNo">Annuler</button></div>`;
-  $('rName').focus();$('rName').select();
-  const ok=()=>{const name=$('rName').value.trim()||'Itinéraire';
-    if(addSaved({type:'route',name,date:Date.now(),dist:lastRoute.dist,loop:$('loop').checked,wps:wps.map(p=>[+p.lat.toFixed(6),+p.lng.toFixed(6)]),coords:lastRoute.coords.map(c=>[+c[0].toFixed(6),+c[1].toFixed(6)])}))toast('Itinéraire enregistré sur cet appareil.');
-    $('saveBox').innerHTML='';};
-  $('rOk').onclick=ok;$('rName').onkeydown=e=>{if(e.key==='Enter')ok();};$('rNo').onclick=()=>$('saveBox').innerHTML='';
+  histUpsert();const h=hist.find(x=>x.id===curId);if(!h)return;
+  if(h.pin){toast('Déjà dans tes favoris ⭐');return;}
+  h.pin=true;renameHist(h,()=>toast('Ajouté aux favoris ⭐ (onglet Tracés).'));
 };
-$('bExport').onclick=()=>shareFile('pistes-quad-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({v:2,routes:saved(),notes,prefs:LS.get('pq_prefs',{})}),'application/json');
+$('bExport').onclick=()=>shareFile('pistes-quad-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({v:3,routes:saved(),hist,notes,prefs:LS.get('pq_prefs',{})}),'application/json');
 $('jsonIn').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const j=JSON.parse(await f.text());if(!j.routes&&!j.notes)throw new Error('fichier non reconnu');
     const cur=saved(),seen=new Set(cur.map(r=>r.date+r.name));const add=(j.routes||[]).filter(r=>!seen.has(r.date+r.name));
-    LS.set('pq_routes',add.concat(cur));
+    LS.set('pq_routes',add.filter(r=>r.type==='ride').concat(LS.get('pq_routes',[])));
+    const ids=new Set(hist.map(h=>h.id));let nh=0;for(const h of (j.hist||[]))if(!ids.has(h.id)){hist.push(h);nh++;}
+    for(const r of add.filter(r=>r.type!=='ride')){hist.push({id:'h'+r.date,name:r.name,date:r.date,upd:r.date,pin:true,dist:r.dist,green:null,loop:!!r.loop,wps:r.wps,prev:simplifyCs(r.coords)});nh++;}
+    saveHist();
     let nn=0;for(const id in j.notes||{}){if(!notes[id]||(j.notes[id].d||0)>(notes[id].d||0)){notes[id]=j.notes[id];nn++;}}LS.set('pq_notes',notes);
     for(const w of ways.values()){const c=w.cat;classifyWay(w);if(c!==w.cat)drawWay(w);}graphDirty=true;
-    renderSaved();updateInfo();toast(`Importé : ${add.length} tracé(s), ${nn} note(s) de chemins.`,4500);
+    renderSaved();updateInfo();toast(`Importé : ${nh} itinéraire(s), ${nn} note(s) de chemins.`,4500);
   }catch(err){toast('Import impossible : '+err.message);}
   e.target.value='';
 };
@@ -1476,13 +1580,13 @@ const TOUR=[
   ['i-key','Lis les couleurs','<b style="color:#22d3ee">Cyan</b> vérifié par toi · <b style="color:#16a34a">vert</b> ouvert ou chemin rural au cadastre · <b style="color:#a3e635">vert clair</b> à vérifier · <b style="color:#facc15">jaune</b> agricole · <b style="color:#c084fc">violet</b> forêt ONF · <b style="color:#fb7185">rose</b> privé probable · <b style="color:#ef4444">rouge</b> interdit.'],
   ['i-wand','Crée ta boucle','<b>Tracé</b> → choisis 15, 25, 40 ou 60 km → <b style="color:#ff7a1a">Générer ma boucle</b>. Elle prend le plus de vert possible. Ou passe en <b>Tracer</b> et touche la carte.'],
   ['i-cam','Contrôle chaque virage','Un point 📷 à chaque virage et entrée de chemin. <b>Contrôler les virages</b> : Street View s’ouvre face au chemin, réponds <b style="color:#22c55e">✓ OK</b> ou <b style="color:#ef4444">⛔ Interdit</b>, le tracé s’adapte.'],
-  ['i-ride','Roule !','<b>Garder</b> pour enregistrer, <b>Balade</b> pour le GPS et l’alerte hors tracé, <b>GPX</b> pour OsmAnd ou CarPlay.<br><br><b>Le panneau sur place fait toujours foi.</b> Guide complet : Aide → Guide PDF.']];
+  ['i-ride','Retrouve et roule','Chaque itinéraire est gardé tout seul : aperçus en haut de <b>Tracé</b>, liste dans <b>Tracés</b>, ⭐ pour tes favoris. <b>Balade</b> pour le GPS, <b>GPX</b> pour OsmAnd ou CarPlay.<br><br><b>Le panneau sur place fait toujours foi.</b> Guide complet : Aide → Guide PDF.']];
 let tourI=0;
 function tour(i){tourI=i;const w=$('welcome');w.style.display='flex';const t=TOUR[i];
   $('wIc').innerHTML=`<use href="#${t[0]}"/>`;$('wT').textContent=t[1];$('wP').innerHTML=t[2];
   w.querySelectorAll('.dots i').forEach((d,k)=>d.classList.toggle('on',k===i));
   $('wNext').textContent=i<TOUR.length-1?'Suivant':'C’est parti !';}
-function endTour(){$('welcome').style.display='none';LS.set('pq_seen6',true);}
+function endTour(){$('welcome').style.display='none';LS.set('pq_seen7',true);}
 $('wNext').onclick=()=>tourI<TOUR.length-1?tour(tourI+1):endTour();
 $('wSkip').onclick=endTour;
 $('bTour').onclick=()=>tour(0);
@@ -1508,14 +1612,14 @@ document.addEventListener('keydown',e=>{
   if(prefs.loopKm){$('loopKm').value=prefs.loopKm;$('loopKmV').textContent=prefs.loopKm+' km';}
   syncChips();showStats();
   if(prefs.noReuse===false)$('noReuse').checked=false;
-  buildControls();renderSaved();updateInfo();syncVisibility();
+  buildControls();renderSaved();renderHist();updateInfo();syncVisibility();
   if(isTouch)collapse(true);else document.body.classList.add('pOpen');
   const got=readHash();
   if(!got){const d=LS.get('pq_draft',null);if(d&&d.wps&&d.wps.length){wps=d.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!d.loop;drawWps();}}
   const r=LS.get('pq_ride',null);
   if(r&&r.pts&&r.pts.length&&Date.now()-r.t0<12*3600e3){toast('Balade en cours récupérée.',3000);startRide(r);showPane('pRide');}
   autoLoad();
-  if(!LS.get('pq_seen6',false))setTimeout(()=>tour(0),500);
+  if(!LS.get('pq_seen7',false))setTimeout(()=>tour(0),500);
   if('serviceWorker'in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
   if(location.protocol==='file:')setTimeout(()=>toast('Ouvert depuis un fichier : tout marche sauf le hors-ligne et parfois le GPS. Mets-le en ligne pour en profiter à 100 %.',6000),7000);
 })();
