@@ -2,7 +2,7 @@
    - Coque de l'appli : servie depuis le cache, mise à jour en arrière-plan
    - Tuiles de carte : cache d'abord (hors-ligne), limité en nombre
    - Données (Overpass, géocodage, altitude) : réseau uniquement (l'appli les garde elle-même) */
-const SHELL_CACHE = 'pq-shell-v11';
+const SHELL_CACHE = 'pq-shell-v12';
 const TILE_CACHE = 'pq-tiles';
 const MAX_TILES = 8000;
 const SHELL = [
