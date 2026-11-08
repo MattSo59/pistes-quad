@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
+<meta name="theme-color" content="#0a1426">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,229 +14,400 @@
 <title>Pistes Quad & SSV</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#111827;--fg:#f9fafb;--muted:#9ca3af;--card:#1f2937;--line:#374151;--acc:#e11d8f;--ok:#16a34a;--st:env(safe-area-inset-top);--sb:env(safe-area-inset-bottom)}
+:root{
+  --bg:#0a1426;--bg2:#0f1c33;--card:#132544;--card2:#1a2f55;--line:#24395f;--fg:#eef3fb;--muted:#93a4c3;
+  --blue:#2f7bff;--blue2:#5b9bff;--orange:#ff7a1a;--orange2:#ffa04d;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;
+  --st:env(safe-area-inset-top);--sb:env(safe-area-inset-bottom);--r:16px;--shadow:0 8px 24px rgba(0,8,30,.45);
+  --font:'Barlow',-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;
+}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg)}
-#map{position:fixed;inset:0;background:#0b1220}
-button{font-family:inherit}
-#top{position:fixed;top:calc(8px + var(--st));left:8px;z-index:1000;display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-width:calc(100vw - 16px)}
-.btn{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px #0006;white-space:nowrap}
-.btn:active{transform:scale(.97)}.btn:disabled{opacity:.5}
-.btn.primary{background:var(--ok);border-color:var(--ok)}.btn.acc{background:var(--acc);border-color:var(--acc)}
-.btn.small{padding:7px 10px;font-size:13px}.btn.ico{padding:9px 11px}
-.btn.on{background:#2563eb;border-color:#2563eb}
-.seg{display:flex;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px #0006;border:1px solid var(--line)}
-.seg button{border:0;background:var(--card);color:var(--muted);padding:9px 12px;font-weight:700;font-size:14px;cursor:pointer}
-.seg button.on{background:var(--acc);color:#fff}
-#chip{background:#000b;border-radius:999px;padding:6px 10px;font-size:12px;color:#d1d5db;display:none}
-#searchBox{position:fixed;top:calc(56px + var(--st));left:8px;z-index:1001;width:min(420px,calc(100vw - 16px));display:none}
-#searchBox input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:#fff;font-size:16px}
-#searchRes .r{background:var(--card);padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
-#toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(60px + var(--st));z-index:1100;background:#000d;padding:9px 14px;border-radius:10px;font-size:14px;display:none;max-width:92vw;text-align:center;cursor:pointer}
-#hud{position:fixed;left:50%;transform:translateX(-50%);top:calc(58px + var(--st));z-index:999;background:#000d;border-radius:12px;padding:6px 12px;display:none;gap:14px;font-size:13px;text-align:center}
-#hud b{display:block;font-size:20px}
-#offBanner{position:fixed;left:0;right:0;top:0;z-index:1200;background:#dc2626;color:#fff;font-weight:700;text-align:center;padding:calc(8px + var(--st)) 8px 8px;display:none}
-#panel{position:fixed;z-index:1000;background:var(--bg);border:1px solid var(--line);display:flex;flex-direction:column;box-shadow:0 -4px 20px #0008}
+html,body{margin:0;height:100%;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--fg);font-size:15px}
+#map{position:fixed;inset:0;background:#0a1426}
+button,input,textarea,select{font-family:inherit}
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.ic.fill{fill:currentColor;stroke:none}
+/* ---------- barre du haut ---------- */
+#top{position:fixed;top:calc(10px + var(--st));left:10px;z-index:1000;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;max-width:calc(100vw - 80px)}
+.glass{background:rgba(10,20,38,.82);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid rgba(91,155,255,.18);box-shadow:var(--shadow)}
+.seg{display:flex;border-radius:14px;padding:4px;gap:2px}
+.seg button{border:0;background:none;color:var(--muted);padding:9px 14px;font-weight:700;font-size:15px;cursor:pointer;border-radius:10px;display:flex;gap:7px;align-items:center;transition:background .15s,color .15s}
+.seg button.on{background:var(--blue);color:#fff;box-shadow:0 2px 10px rgba(47,123,255,.45)}
+#mTrace.on{background:var(--orange);box-shadow:0 2px 10px rgba(255,122,26,.45)}
+.fab{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--fg);cursor:pointer;border:1px solid rgba(91,155,255,.18)}
+.fab:active,.btn:active{transform:scale(.96)}
+.fab.on{background:var(--blue);color:#fff}
+#fabs{position:fixed;top:calc(10px + var(--st));right:10px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+#chip{border-radius:999px;padding:7px 12px 7px 10px;font-size:13px;color:#dbe6fa;display:none;align-items:center;gap:8px;font-weight:600}
+#chip::before{content:"";width:12px;height:12px;border-radius:50%;border:2px solid var(--blue2);border-top-color:transparent;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#searchBox{position:fixed;top:calc(66px + var(--st));left:10px;z-index:1001;width:min(440px,calc(100vw - 20px));display:none;border-radius:16px;overflow:hidden}
+#searchBox input{width:100%;padding:14px 16px;border:0;background:transparent;color:#fff;font-size:17px;outline:none}
+#searchRes .r{padding:12px 16px;border-top:1px solid var(--line);cursor:pointer;font-size:15px}
+#searchRes .r:hover{background:var(--card)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + var(--st));z-index:1100;padding:11px 16px;border-radius:14px;font-size:15px;display:none;max-width:min(92vw,520px);text-align:center;cursor:pointer;font-weight:600;line-height:1.35}
+#hud{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + var(--st));z-index:999;border-radius:16px;padding:8px 16px;display:none;gap:18px;font-size:12px;text-align:center;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+#hud b{display:block;font-size:26px;color:#fff;letter-spacing:0;font-weight:800}
+#offBanner{position:fixed;left:0;right:0;top:0;z-index:1200;background:var(--orange);color:#fff;font-weight:800;text-align:center;padding:calc(10px + var(--st)) 8px 10px;display:none;font-size:17px}
+#mapLegend{position:fixed;right:66px;top:calc(10px + var(--st));z-index:1000;border-radius:16px;padding:10px 14px;display:none;font-size:13.5px;max-width:280px}
+#mapLegend .row{padding:3px 0}
+/* ---------- panneau ---------- */
+#panel{position:fixed;z-index:1000;background:var(--bg2);display:flex;flex-direction:column;box-shadow:0 -10px 40px rgba(0,8,30,.55);border:1px solid var(--line)}
+#handle{display:none;justify-content:center;padding:8px 0 2px;cursor:grab;touch-action:none}
+#handle i{width:42px;height:5px;border-radius:3px;background:#3a5282}
 @media (max-width:760px){
-  #panel{left:0;right:0;bottom:0;height:min(52vh,460px);border-radius:16px 16px 0 0;padding-bottom:var(--sb);transition:height .2s}
-  #panel.collapsed{height:calc(54px + var(--sb))}#panel.full{height:calc(88vh - var(--st))}
-  .leaflet-bottom.leaflet-left{bottom:calc(54px + var(--sb))}
-  body.pOpen .leaflet-bottom.leaflet-left{bottom:min(52vh,460px)}
+  #panel{left:0;right:0;bottom:0;height:min(52vh,470px);border-radius:24px 24px 0 0;padding-bottom:var(--sb);transition:height .25s cubic-bezier(.2,.8,.2,1);border-bottom:0}
+  #panel.collapsed{height:calc(82px + var(--sb))}#panel.full{height:calc(90vh - var(--st))}
+  #handle{display:flex}
+  .leaflet-control-zoom{display:none}
+  .leaflet-bottom.leaflet-left{bottom:calc(82px + var(--sb))}
+  body.pOpen .leaflet-bottom.leaflet-left{bottom:min(52vh,470px)}
   .pc-only{display:none!important}
 }
-@media (min-width:761px){#panel{top:10px;right:10px;bottom:10px;width:390px;border-radius:14px}#panel.collapsed{bottom:auto;height:56px}#top{max-width:calc(100vw - 420px)}.mob-only{display:none!important}}
-#grip{display:flex;align-items:center;gap:2px;padding:6px 6px;border-bottom:1px solid var(--line);flex:0 0 auto}
-#grip .tab{flex:1;background:none;border:0;color:var(--muted);font-weight:700;font-size:12.5px;padding:8px 2px;border-radius:8px;cursor:pointer;white-space:nowrap}
-#grip .tab.on{color:#fff;background:var(--line)}
-#toggle{background:none;border:0;color:var(--muted);font-size:18px;padding:4px 8px;cursor:pointer}
-#body{overflow:auto;padding:10px 12px 18px;font-size:14px;line-height:1.4;flex:1;-webkit-overflow-scrolling:touch}
-.pane{display:none}.pane.on{display:block}
-h3{margin:14px 0 6px;font-size:14px;color:#e5e7eb}h3:first-child{margin-top:2px}
-label.row{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
-label.row input{width:18px;height:18px;flex:0 0 auto}
-.sw{display:inline-block;width:26px;height:0;border-top:4px solid;vertical-align:middle;flex:0 0 auto}
-.muted{color:var(--muted);font-size:12.5px}
-.warn{background:#78350f55;border:1px solid #b45309;border-radius:8px;padding:8px;font-size:12.5px;margin:6px 0}
-.info{background:#1e3a8a44;border:1px solid #1d4ed8;border-radius:8px;padding:8px;font-size:12.5px;margin:6px 0}
-.stats{background:var(--card);border-radius:10px;padding:8px 10px;margin:8px 0}
-.btns{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
-.item{background:var(--card);border-radius:10px;padding:8px 10px;margin:6px 0}
-.item .t{font-weight:700}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.big{font-size:22px;font-weight:800}
-input[type=range]{width:100%}
-input[type=text],textarea{width:100%;padding:9px;border-radius:8px;border:1px solid var(--line);background:#0b1220;color:#fff;font-size:16px;font-family:inherit}
-.leaflet-popup-content{font-size:13px;min-width:230px;margin:10px 12px}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#1f2937;color:#f9fafb}
-.leaflet-container a.leaflet-popup-close-button{color:#9ca3af}
-.links{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
-.links a,.links button{background:#374151;color:#fff!important;text-decoration:none;padding:6px 9px;border-radius:7px;font-size:12px;border:0;cursor:pointer}
-.links .g{background:#0e7490}.links .r{background:#991b1b}
-table.tags{border-collapse:collapse;margin-top:4px}table.tags td{padding:1px 8px 1px 0;font-size:12px;vertical-align:top}table.tags td:first-child{color:#9ca3af}
-.wp{background:var(--acc);color:#fff;border:2px solid #fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;box-shadow:0 1px 4px #0008}
-.me{width:22px;height:22px;position:relative}
-.me .dot{position:absolute;inset:3px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 6px #2563eb44}
-.me .arr{position:absolute;left:50%;top:-9px;margin-left:-6px;border:6px solid transparent;border-bottom:10px solid #2563eb;display:none}
-#profile svg{width:100%;height:110px;background:var(--card);border-radius:8px;display:block}
+@media (min-width:761px){
+  #panel{top:12px;right:12px;bottom:12px;width:400px;border-radius:22px}
+  #panel.collapsed{bottom:auto;height:66px}
+  #fabs{right:424px}#mapLegend{right:480px}
+  #top{max-width:calc(100vw - 500px)}
+  .mob-only{display:none!important}
+}
+#grip{display:flex;align-items:stretch;gap:2px;padding:4px 8px 6px;border-bottom:1px solid var(--line);flex:0 0 auto}
+#grip .tab{flex:1;background:none;border:0;color:var(--muted);font-weight:700;font-size:12px;padding:6px 2px;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;letter-spacing:.01em}
+#grip .tab .ic{width:22px;height:22px}
+#grip .tab.on{color:#fff;background:var(--card)}
+#grip .tab.on .ic{color:var(--orange)}
+#toggle{background:none;border:0;color:var(--muted);padding:4px 6px;cursor:pointer;display:flex;align-items:center}
+#toggle .ic{transition:transform .2s}#panel.collapsed #toggle .ic{transform:rotate(180deg)}
+#body{overflow:auto;padding:12px 14px 22px;line-height:1.42;flex:1;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.pane{display:none;animation:fade .2s}.pane.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:0 0 12px}
+.card-h{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue2);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+details.card>summary{list-style:none;cursor:pointer;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue2);display:flex;justify-content:space-between;align-items:center}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s;margin-right:4px}
+details.card[open]>summary::after{transform:rotate(-135deg)}
+details.card[open]>summary{margin-bottom:10px}
+h3{margin:16px 0 8px;font-size:13px;color:var(--blue2);text-transform:uppercase;letter-spacing:.08em;font-weight:800}h3:first-child{margin-top:2px}
+.hero{background:linear-gradient(135deg,#173a7a 0%,#132544 55%,#3a2416 130%);border-color:#2b4f8f}
+.hero-t{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.hero-t .badge{width:42px;height:42px;border-radius:12px;background:var(--orange);display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto;box-shadow:0 4px 14px rgba(255,122,26,.4)}
+.hero-t b{display:block;font-size:19px;font-weight:800}.hero-t span{color:#b9c8e4;font-size:13.5px}
+.chips{display:flex;gap:6px;margin:4px 0 10px;flex-wrap:wrap}
+.chips button{flex:1;min-width:54px;background:rgba(10,20,38,.55);border:1px solid #2f4b7d;color:#dbe6fa;border-radius:12px;padding:9px 0;font-weight:800;font-size:15px;cursor:pointer}
+.chips button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.rangeRow{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.rangeRow output{min-width:92px;white-space:nowrap;text-align:right;font-size:24px;font-weight:800;color:#fff}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--orange));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid var(--blue);box-shadow:0 2px 8px #0008;cursor:pointer}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:4px solid var(--blue);cursor:pointer}
+.btn{background:var(--card2);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:15px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(47,123,255,.35)}
+.btn.acc{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 4px 14px rgba(255,122,26,.35)}
+.btn.ghost{background:transparent}
+.btn.small{padding:8px 11px;font-size:14px;border-radius:10px}
+.btn.wide{width:100%;padding:14px;font-size:17px;border-radius:14px}
+.row2{display:flex;gap:8px}.row2 .btn.wide{flex:1}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.toolbar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.actions .btn,.toolbar .btn{flex-direction:column;gap:4px;padding:10px 4px;font-size:12.5px;font-weight:700}
+.actions .btn .ic,.toolbar .btn .ic{width:22px;height:22px}
+/* interrupteurs */
+input[type=checkbox]{-webkit-appearance:none;appearance:none;width:44px;height:26px;border-radius:13px;background:#2a3d63;position:relative;cursor:pointer;flex:0 0 auto;transition:background .2s;margin:0}
+input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px #0006}
+input[type=checkbox]:checked{background:var(--blue)}
+input[type=checkbox]:checked::after{transform:translateX(18px)}
+input[type=radio]{accent-color:var(--orange);width:20px;height:20px;margin:0}
+label.row{display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;font-size:15px}
+.sw{display:inline-block;width:26px;height:0;border-top:5px solid;vertical-align:middle;flex:0 0 auto;border-radius:3px}
+.muted{color:var(--muted);font-size:13.5px}
+.tip{display:flex;gap:10px;align-items:flex-start;color:var(--muted);font-size:13.5px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.tip .ic{color:var(--orange);margin-top:1px}
+.warn{background:rgba(255,122,26,.12);border:1px solid rgba(255,122,26,.45);border-radius:12px;padding:10px 12px;font-size:13.5px;margin:8px 0}
+.info{background:rgba(47,123,255,.12);border:1px solid rgba(47,123,255,.4);border-radius:12px;padding:10px 12px;font-size:13.5px;margin:8px 0}
+/* stats */
+.empty{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:14px;padding:4px 0}
+.empty .ic{width:34px;height:34px;color:#3a5282;stroke-width:1.6}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpis div{background:var(--bg2);border-radius:12px;padding:9px 10px}
+.kpis span{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.kpis b{font-size:21px;font-weight:800}
+.kpis .hl b{color:var(--orange)}
+.mix{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:12px 0 8px;gap:2px}
+.mix i{display:block;min-width:3px}
+.mixleg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--muted)}
+.mixleg span{display:inline-flex;align-items:center;gap:5px}.mixleg i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.note{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin-top:8px;color:#ffd2b0}
+.note.bad{color:#ffb4b4}
+.stats{background:var(--bg2);border-radius:12px;padding:10px 12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.grid2 .stats span{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.big{font-size:24px;font-weight:800}
+.item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:0 0 10px}
+.item .t{font-weight:800;font-size:16px}
+input[type=text],textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:#fff;font-size:16px;outline:none}
+input[type=text]:focus,textarea:focus{border-color:var(--blue)}
+input[type=file]{color:var(--muted);font-size:14px;max-width:100%}
+/* popups */
+.leaflet-popup-content{font-size:14px;min-width:240px;margin:12px 14px;line-height:1.4}
+.leaflet-popup-content-wrapper{background:var(--bg2);color:var(--fg);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow)}
+.leaflet-popup-tip{background:var(--bg2)}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted);font-size:20px;padding:6px 8px 0 0}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-weight:800;font-size:13px;margin-bottom:6px}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.links a,.links button{background:var(--card2);color:#fff!important;text-decoration:none;padding:7px 10px;border-radius:9px;font-size:13px;border:0;cursor:pointer;font-weight:600;font-family:inherit}
+.links .g{background:#15803d}.links .r{background:#b91c1c}.links .o{background:var(--orange)}
+table.tags{border-collapse:collapse;margin-top:6px}table.tags td{padding:1px 8px 1px 0;font-size:12.5px;vertical-align:top}table.tags td:first-child{color:var(--muted)}
+.leaflet-control-zoom a{background:var(--bg2)!important;color:#fff!important;border-color:var(--line)!important}
+.leaflet-control-scale-line{background:rgba(10,20,38,.75);color:#dbe6fa;border-color:#dbe6fa}
+.leaflet-control-attribution{background:rgba(10,20,38,.7)!important;color:#93a4c3!important;font-size:10px}.leaflet-control-attribution a{color:#b9c8e4!important}
+/* marqueurs */
+.wp{background:var(--orange);color:#fff;border:3px solid #fff;border-radius:50% 50% 50% 6px;transform:rotate(-45deg);width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px #0009}
+.wp span{transform:rotate(45deg);font-weight:800;font-size:14px}
+.wp.s{background:var(--blue)}
+.me{width:24px;height:24px;position:relative}
+.me .dot{position:absolute;inset:3px;border-radius:50%;background:var(--blue);border:3px solid #fff;box-shadow:0 0 0 8px rgba(47,123,255,.25)}
+.me .arr{position:absolute;left:50%;top:-10px;margin-left:-7px;border:7px solid transparent;border-bottom:11px solid var(--blue);display:none}
+#profile svg{width:100%;height:120px;background:var(--bg2);border-radius:12px;display:block;margin-top:6px}
 .leaflet-container.trace{cursor:crosshair}
-kbd{background:#374151;border-radius:4px;padding:1px 5px;font-size:12px}
-.prog{height:6px;background:#374151;border-radius:3px;overflow:hidden;margin:6px 0}.prog div{height:100%;background:var(--ok);width:0}
+kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;border:1px solid var(--line)}
+.prog{height:8px;background:var(--card2);border-radius:4px;overflow:hidden;margin:8px 0}.prog div{height:100%;background:linear-gradient(90deg,var(--blue),var(--orange));width:0}
+/* accueil */
+#welcome{position:fixed;inset:0;z-index:2000;background:rgba(5,10,22,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + var(--sb))}
+@media (min-width:761px){#welcome{align-items:center}}
+#welcome .w{background:var(--bg2);border:1px solid var(--line);border-radius:24px;max-width:440px;width:100%;padding:22px;box-shadow:var(--shadow)}
+#welcome .art{height:120px;border-radius:16px;background:linear-gradient(135deg,#1d4ed8,#0f1c33 60%,#ff7a1a);display:flex;align-items:center;justify-content:center;margin-bottom:16px;color:#fff}
+#welcome .art .ic{width:64px;height:64px;stroke-width:1.6}
+#welcome h2{margin:0 0 8px;font-size:24px;font-weight:800}
+#welcome p{margin:0 0 18px;color:#b9c8e4;font-size:15.5px;line-height:1.45}
+#welcome .dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px}#welcome .dots i{width:8px;height:8px;border-radius:4px;background:#2a3d63;transition:all .2s}#welcome .dots i.on{width:22px;background:var(--orange)}
 </style>
+
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+<symbol id="i-loc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><path d="M4 6h3M4 12h3M4 18h3"/><path d="M11 6h9M11 12h9M11 18h9"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="5" r="2.2"/><path d="M8.2 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.8"/></symbol>
+<symbol id="i-ride" viewBox="0 0 24 24"><circle cx="5.5" cy="17" r="3"/><circle cx="18.5" cy="17" r="3"/><path d="M8.5 17h7M5.5 14l2.5-5h6l4.5 8M12 9l-1-3H8.5"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
+<symbol id="i-saved" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4V3z"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4L3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7"/></symbol>
+<symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5V3z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v13M7 8l5-5 5 5"/><path d="M5 12v8h14v-8"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+<symbol id="i-mount" viewBox="0 0 24 24"><path d="M3 20l6-10 4 6 3-4 5 8H3z"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8V4z"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></symbol>
+<symbol id="i-wand" viewBox="0 0 24 24"><path d="M4 20L15 9M14 4v3M19 9h-3M18 5l-2 2M6 4l.8 1.8L8.6 6.6 6.8 7.4 6 9.2 5.2 7.4 3.4 6.6 5.2 5.8z"/></symbol>
+<symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17h14v-5l-2-5H7l-2 5v5z"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="17" r="2"/><path d="M5 12h14"/></symbol>
+</defs></svg>
+
 <div id="map"></div>
-<div id="offBanner">⚠️ Tu sors de l'itinéraire</div>
+<div id="offBanner">Tu sors de l'itinéraire</div>
 
 <div id="top">
-  <div class="seg"><button id="mExplore" class="on" title="Explorer (E)">🔎 Explorer</button><button id="mTrace" title="Tracer (T)">✏️ Tracer</button></div>
-  <button class="btn ico" id="bSearch" title="Rechercher une commune (F)">🔍</button>
-  <button class="btn ico" id="bGps" title="Ma position (G)">📍</button>
-  <button class="btn ico" id="bLoad" title="Charger / rafraîchir les chemins de la zone (L)">⬇︎</button>
-  <span id="chip"></span>
+  <div class="seg glass"><button id="mExplore" class="on" title="Explorer (E)"><svg class="ic"><use href="#i-eye"/></svg>Explorer</button><button id="mTrace" title="Tracer (T)"><svg class="ic"><use href="#i-pencil"/></svg>Tracer</button></div>
+  <span id="chip" class="glass"></span>
 </div>
-<div id="searchBox"><input type="text" id="q" placeholder="Commune, lieu-dit, adresse…" autocomplete="off"><div id="searchRes"></div></div>
-<div id="toast"></div>
-<div id="hud"><div><b id="hSpd">0</b>km/h</div><div><b id="hDist">0,0</b>km faits</div><div id="hRemW"><b id="hRem">–</b>km restants</div></div>
+<div id="fabs">
+  <button class="fab glass" id="bSearch" title="Rechercher un lieu (F)"><svg class="ic"><use href="#i-search"/></svg></button>
+  <button class="fab glass" id="bGps" title="Ma position (G)"><svg class="ic"><use href="#i-loc"/></svg></button>
+  <button class="fab glass" id="bLegend" title="Légende"><svg class="ic"><use href="#i-key"/></svg></button>
+  <button class="fab glass" id="bLayers" title="Fonds de carte"><svg class="ic"><use href="#i-layers"/></svg></button>
+  <button class="fab glass" id="bLoad" title="Charger / rafraîchir les chemins (L)"><svg class="ic"><use href="#i-dl"/></svg></button>
+</div>
+<div id="mapLegend" class="glass"></div>
+<div id="searchBox" class="glass"><input type="text" id="q" placeholder="Commune, lieu-dit, adresse…" autocomplete="off"><div id="searchRes"></div></div>
+<div id="toast" class="glass"></div>
+<div id="hud" class="glass"><div><b id="hSpd">0</b>km/h</div><div><b id="hDist">0,0</b>km faits</div><div id="hRemW"><b id="hRem">–</b>km restants</div></div>
+
+<div id="welcome"><div class="w">
+  <div class="art"><svg class="ic" id="wIc"><use href="#i-route"/></svg></div>
+  <div class="dots"><i class="on"></i><i></i><i></i></div>
+  <h2 id="wT"></h2><p id="wP"></p>
+  <div class="row2"><button class="btn ghost" id="wSkip">Passer</button><button class="btn acc wide" id="wNext">Suivant</button></div>
+</div></div>
 
 <div id="panel">
-  <div id="grip">
-    <button class="tab on" data-p="pRoute">🧭 Tracé</button>
-    <button class="tab" data-p="pRide">🏍 Balade</button>
-    <button class="tab" data-p="pLayers">🗺 Carte</button>
-    <button class="tab" data-p="pSaved">💾 Mes tracés</button>
-    <button class="tab" data-p="pHelp">❓ Aide</button>
-    <button id="toggle" title="Réduire / agrandir">▾</button>
-  </div>
+  <div id="handle"><i></i></div>
+  <nav id="grip">
+    <button class="tab on" data-p="pRoute"><svg class="ic"><use href="#i-route"/></svg>Tracé</button>
+    <button class="tab" data-p="pRide"><svg class="ic"><use href="#i-ride"/></svg>Balade</button>
+    <button class="tab" data-p="pLayers"><svg class="ic"><use href="#i-map"/></svg>Carte</button>
+    <button class="tab" data-p="pSaved"><svg class="ic"><use href="#i-saved"/></svg>Tracés</button>
+    <button class="tab" data-p="pHelp"><svg class="ic"><use href="#i-help"/></svg>Aide</button>
+    <button id="toggle" title="Réduire / agrandir"><svg class="ic"><use href="#i-chev"/></svg></button>
+  </nav>
   <div id="body">
 
   <!-- ============ TRACÉ ============ -->
   <div class="pane on" id="pRoute">
     <div id="loadErr"></div>
-    <h3>🔄 Boucle automatique</h3>
-    <div class="muted">Génère une boucle qui maximise les chemins autorisés, au départ du point D, de ta position ou du centre de la carte.</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:6px"><input type="range" id="loopKm" min="10" max="80" step="5" value="30"><span id="loopKmV" class="big" style="min-width:76px;text-align:right">30 km</span></div>
-    <div class="btns"><button class="btn small primary" id="bGen">Proposer une boucle</button><button class="btn small" id="bGen2" disabled>Autre proposition</button></div>
+    <section class="card hero">
+      <div class="hero-t"><div class="badge"><svg class="ic"><use href="#i-wand"/></svg></div><div><b>Boucle automatique</b><span>Le maximum de chemins autorisés, au départ du point D, de ta position ou du centre de la carte.</span></div></div>
+      <div class="chips" id="kmChips"><button data-km="15">15 km</button><button data-km="25">25 km</button><button data-km="40">40 km</button><button data-km="60">60 km</button></div>
+      <div class="rangeRow"><input type="range" id="loopKm" min="10" max="80" step="5" value="30"><output id="loopKmV">30 km</output></div>
+      <div class="row2"><button class="btn acc wide" id="bGen"><svg class="ic"><use href="#i-wand"/></svg>Générer ma boucle</button><button class="btn" id="bGen2" disabled title="Autre proposition"><svg class="ic"><use href="#i-loop"/></svg></button></div>
+    </section>
 
-    <h3>✏️ Tracé à la main</h3>
-    <div class="muted">Mode <b>Tracer</b> puis touche la carte. <span class="mob-only">Un appui long ajoute aussi un point.</span><span class="pc-only">Clic droit = ajouter un point dans n'importe quel mode.</span> Un point posé près du tracé s'insère dedans. Les points se déplacent au doigt / à la souris.</div>
-    <div class="btns">
-      <button class="btn small" id="bUndo">↶ Dernier point</button>
-      <button class="btn small" id="bClear">✕ Effacer</button>
-      <button class="btn small" id="bRev">⇄ Inverser</button>
-    </div>
-    <label class="row"><input type="checkbox" id="loop"> Boucle (retour au départ)</label>
-    <label class="row"><input type="checkbox" id="noReuse" checked> Éviter de repasser par les mêmes chemins</label>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-route"/></svg>Mon itinéraire</div>
+      <div id="stats"></div>
+      <div class="toolbar">
+        <button class="btn" id="bUndo"><svg class="ic"><use href="#i-undo"/></svg>Annuler</button>
+        <button class="btn" id="bRev"><svg class="ic"><use href="#i-swap"/></svg>Inverser</button>
+        <button class="btn" id="bClear"><svg class="ic"><use href="#i-trash"/></svg>Effacer</button>
+      </div>
+      <label class="row"><input type="checkbox" id="loop"> Boucle (retour au départ)</label>
+      <label class="row"><input type="checkbox" id="noReuse" checked> Éviter les allers-retours</label>
+      <div class="actions">
+        <button class="btn acc" id="bSave"><svg class="ic"><use href="#i-save"/></svg>Garder</button>
+        <button class="btn" id="bGpx"><svg class="ic"><use href="#i-share"/></svg>GPX</button>
+        <button class="btn" id="bLink"><svg class="ic"><use href="#i-link"/></svg>Envoyer</button>
+        <button class="btn" id="bElev"><svg class="ic"><use href="#i-mount"/></svg>Profil</button>
+      </div>
+      <div id="saveBox"></div>
+      <div id="profile"></div>
+      <div class="tip"><svg class="ic"><use href="#i-pencil"/></svg><span>Passe en <b>Tracer</b> et touche la carte pour poser tes points. <span class="mob-only">Appui long = ajouter un point.</span><span class="pc-only">Clic droit = ajouter un point.</span> Un point posé sur le tracé s'insère dedans ; les points se déplacent au doigt.</span></div>
+    </section>
 
-    <div class="stats" id="stats">Aucun itinéraire.</div>
-    <div class="btns">
-      <button class="btn small acc" id="bSave">💾 Enregistrer</button>
-      <button class="btn small" id="bGpx">GPX / OsmAnd</button>
-      <button class="btn small" id="bLink">🔗 Envoyer</button>
-      <button class="btn small" id="bElev">⛰ Profil</button>
-    </div>
-    <div id="saveBox"></div>
-    <div id="profile"></div>
-
-    <h3>Le tracé peut emprunter</h3>
-    <div id="routeCats"></div>
-    <h3>Préférence</h3>
-    <input type="range" id="pref" min="0" max="4" step="0.5" value="2">
-    <div class="muted" style="display:flex;justify-content:space-between"><span>Plus court</span><span>Max de chemins</span></div>
+    <details class="card">
+      <summary>Réglages du tracé</summary>
+      <div class="muted" style="margin-bottom:4px">Le tracé peut emprunter :</div>
+      <div id="routeCats"></div>
+      <h3>Préférence</h3>
+      <input type="range" id="pref" min="0" max="4" step="0.5" value="2">
+      <div class="muted" style="display:flex;justify-content:space-between;margin-top:6px"><span>Plus court</span><span>Max de chemins</span></div>
+    </details>
   </div>
 
   <!-- ============ BALADE ============ -->
   <div class="pane" id="pRide">
-    <div class="btns"><button class="btn primary" id="bRide" style="flex:1;font-size:16px;padding:12px">▶ Démarrer la balade</button></div>
+    <button class="btn primary wide" id="bRide">▶ Démarrer la balade</button>
     <div class="grid2">
-      <div class="stats"><div class="muted">Distance</div><div class="big" id="rDist">0,0 km</div></div>
-      <div class="stats"><div class="muted">Durée</div><div class="big" id="rTime">0:00</div></div>
-      <div class="stats"><div class="muted">Vitesse moy.</div><div class="big" id="rAvg">–</div></div>
-      <div class="stats"><div class="muted">Reste (itinéraire)</div><div class="big" id="rRem">–</div></div>
+      <div class="stats"><span>Distance</span><div class="big" id="rDist">0,0 km</div></div>
+      <div class="stats"><span>Durée</span><div class="big" id="rTime">0:00</div></div>
+      <div class="stats"><span>Vitesse moy.</span><div class="big" id="rAvg">–</div></div>
+      <div class="stats"><span>Reste</span><div class="big" id="rRem">–</div></div>
     </div>
-    <label class="row"><input type="checkbox" id="follow" checked> Suivre ma position sur la carte</label>
-    <label class="row"><input type="checkbox" id="wake" checked> Garder l'écran allumé</label>
-    <label class="row"><input type="checkbox" id="offAlert" checked> Alerte si je sors de l'itinéraire</label>
-    <div class="info"><b>🚙 CarPlay (iPhone)</b> : Apple n'autorise sur CarPlay que des applis natives validées, donc aucune appli web, celle-ci comprise. Pour avoir ton tracé sur l'écran CarPlay :<br>
-    1. Installe <b>OsmAnd</b> (gratuit, compatible CarPlay).<br>
-    2. Ici : <b>🧭 Tracé → GPX / OsmAnd</b> → choisis OsmAnd dans le menu de partage.<br>
-    3. Dans OsmAnd : Navigation → Paramètres → <b>Suivre la trace</b>. Choisis le mode « trace d'origine » pour qu'il ne recalcule pas par les routes.<br>
-    4. Branche l'iPhone : le guidage s'affiche sur CarPlay.</div>
-    <div class="btns"><button class="btn small" id="bOsmand">📤 Envoyer l'itinéraire vers OsmAnd / CarPlay</button></div>
-    <div class="info">La balade enregistre ta trace (sauvegardée au fil de l'eau). <b>Limite d'un site web :</b> si tu verrouilles le téléphone ou changes d'appli, le GPS s'arrête et la trace reprend au retour. Pour enregistrer écran éteint, exporte le GPX vers OsmAnd ou ton GPS de guidon. La vibration d'alerte ne marche pas sur iPhone (bandeau rouge à la place).</div>
+    <section class="card">
+      <label class="row"><input type="checkbox" id="follow" checked> Suivre ma position</label>
+      <label class="row"><input type="checkbox" id="wake" checked> Garder l'écran allumé</label>
+      <label class="row"><input type="checkbox" id="offAlert" checked> Alerte si je sors du tracé</label>
+    </section>
+    <details class="card">
+      <summary>CarPlay (iPhone)</summary>
+      <div class="muted">Apple n'autorise sur CarPlay que des applis natives validées, donc aucune appli web, celle-ci comprise. Pour avoir ton tracé sur l'écran CarPlay :<br>
+      1. Installe <b>OsmAnd</b> (gratuit, compatible CarPlay).<br>
+      2. Touche le bouton ci-dessous et choisis OsmAnd dans le menu de partage.<br>
+      3. Dans OsmAnd : Navigation → Paramètres → <b>Suivre la trace</b>, mode « trace d'origine ».<br>
+      4. Branche l'iPhone : le guidage s'affiche sur CarPlay.</div>
+      <div class="btns"><button class="btn primary" id="bOsmand"><svg class="ic"><use href="#i-car"/></svg>Envoyer vers OsmAnd</button></div>
+    </details>
+    <div class="info">La balade enregistre ta trace au fil de l'eau. <b>Limite d'un site web :</b> écran verrouillé ou autre appli = GPS en pause, la trace reprend au retour. Pour enregistrer écran éteint, utilise OsmAnd. Sur iPhone, l'alerte hors tracé est un bandeau (pas de vibration).</div>
   </div>
 
   <!-- ============ CARTE ============ -->
   <div class="pane" id="pLayers">
-    <h3>Fond de carte</h3>
-    <div id="bases"></div>
-    <label class="row"><input type="checkbox" id="cadastre"> Cadastre (repérer les chemins ruraux)</label>
-    <h3>Chemins affichés</h3>
-    <div id="dispCats"></div>
-    <label class="row"><input type="checkbox" id="showBarriers" checked> Barrières / plots (🔴 infranchissable, 🟠 portail)</label>
-    <label class="row"><input type="checkbox" id="showForests" checked> Contours forêts domaniales (ONF)</label>
-    <label class="row"><input type="checkbox" id="showAreas"> Zones de données chargées</label>
-    <h3>Données des chemins</h3>
-    <label class="row"><input type="checkbox" id="autoLoad" checked> Charger automatiquement en me déplaçant sur la carte</label>
-    <div class="muted" id="dataInfo">Aucune donnée chargée.</div>
-    <div class="muted" style="margin-top:6px">Serveur Overpass personnalisé (facultatif, sinon automatique) :</div>
-    <input type="text" id="srv" placeholder="https://…/api/interpreter" autocomplete="off" autocapitalize="off" spellcheck="false">
-    <div class="btns"><button class="btn small" id="bFourmies">Zone Fourmies (~25 km)</button><button class="btn small" id="bRefresh">↻ Rafraîchir la zone</button></div>
-    <h3>Hors-ligne</h3>
-    <div class="muted">Les chemins chargés et les cartes déjà vues restent en mémoire sur l'appareil. Pour partir sans réseau, enregistre le fond IGN de la zone affichée (zooms 12 à 16).</div>
-    <div class="btns"><button class="btn small" id="bOffline">📥 Enregistrer la carte de la zone</button><button class="btn small" id="bWipe">🗑 Vider le cache</button></div>
-    <div id="offProg"></div>
-    <div class="pc-only"><h3>Raccourcis clavier</h3><div class="muted"><kbd>E</kbd> explorer · <kbd>T</kbd> tracer · <kbd>Z</kbd> annuler le dernier point · <kbd>F</kbd> rechercher · <kbd>G</kbd> ma position · <kbd>L</kbd> charger la zone · <kbd>B</kbd> boucle auto · <kbd>Échap</kbd> fermer</div></div>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-layers"/></svg>Fond de carte</div>
+      <div id="bases"></div>
+      <label class="row"><input type="checkbox" id="cadastre"> Cadastre (repérer les chemins ruraux)</label>
+    </section>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-key"/></svg>Chemins affichés</div>
+      <div id="dispCats"></div>
+      <label class="row"><input type="checkbox" id="showBarriers" checked> Barrières et plots</label>
+      <label class="row"><input type="checkbox" id="showForests" checked> Forêts domaniales (ONF)</label>
+      <label class="row"><input type="checkbox" id="showAreas"> Zones de données chargées</label>
+    </section>
+    <details class="card">
+      <summary>Données et hors-ligne</summary>
+      <label class="row"><input type="checkbox" id="autoLoad" checked> Charger en me déplaçant sur la carte</label>
+      <div class="muted" id="dataInfo">Aucune donnée chargée.</div>
+      <div class="btns"><button class="btn small" id="bFourmies">Zone Fourmies</button><button class="btn small" id="bRefresh">↻ Rafraîchir la zone</button></div>
+      <h3>Hors-ligne</h3>
+      <div class="muted">Les chemins et les cartes déjà vues restent sur l'appareil. Pour partir sans réseau, enregistre le fond IGN de la zone affichée.</div>
+      <div class="btns"><button class="btn small primary" id="bOffline">Enregistrer la carte de la zone</button><button class="btn small" id="bWipe">Vider le cache</button></div>
+      <div id="offProg"></div>
+      <h3>Serveur Overpass (avancé)</h3>
+      <input type="text" id="srv" placeholder="Automatique" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="pc-only"><h3>Raccourcis clavier</h3><div class="muted"><kbd>E</kbd> explorer · <kbd>T</kbd> tracer · <kbd>Z</kbd> annuler · <kbd>F</kbd> rechercher · <kbd>G</kbd> position · <kbd>L</kbd> charger · <kbd>B</kbd> boucle · <kbd>Échap</kbd> fermer</div></div>
+    </details>
   </div>
 
   <!-- ============ MES TRACÉS ============ -->
   <div class="pane" id="pSaved">
-    <h3>Itinéraires et sorties</h3>
     <div id="savedList" class="muted">Rien d'enregistré pour l'instant.</div>
-    <h3>Chemins que j'ai notés</h3>
-    <div class="muted" id="notesInfo"></div>
-    <h3>Passer du PC au téléphone (et inversement)</h3>
-    <div class="muted">Chaque appareil garde ses données. Pour tout transférer : <b>Exporter</b> sur l'un, <b>Importer</b> sur l'autre. Pour un seul itinéraire, utilise <b>🔗 Envoyer</b> (lien).</div>
-    <div class="btns"><button class="btn small" id="bExport">⬆︎ Exporter mes données</button><label class="btn small" style="display:inline-block">⬇︎ Importer<input type="file" id="jsonIn" accept=".json,application/json" style="display:none"></label></div>
-    <h3>Importer un GPX</h3>
-    <input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml">
-    <div class="muted">Affiche la trace d'un pote pour la comparer au réseau autorisé.</div>
-    <div class="btns"><button class="btn small" id="bClearImp">Masquer les GPX importés</button></div>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-saved"/></svg>Chemins que j'ai notés</div>
+      <div class="muted" id="notesInfo"></div>
+    </section>
+    <details class="card">
+      <summary>PC ↔ téléphone, import GPX</summary>
+      <div class="muted">Chaque appareil garde ses données. Pour tout transférer : <b>Exporter</b> sur l'un, <b>Importer</b> sur l'autre. Pour un seul itinéraire : bouton <b>Envoyer</b>.</div>
+      <div class="btns"><button class="btn small" id="bExport">Exporter mes données</button><label class="btn small">Importer<input type="file" id="jsonIn" accept=".json,application/json" style="display:none"></label></div>
+      <h3>Importer un GPX</h3>
+      <input type="file" id="gpxIn" accept=".gpx,application/gpx+xml,application/xml,text/xml">
+      <div class="muted" style="margin-top:6px">Affiche la trace d'un pote pour la comparer au réseau autorisé.</div>
+      <div class="btns"><button class="btn small" id="bClearImp">Masquer les GPX importés</button></div>
+    </details>
   </div>
 
   <!-- ============ AIDE ============ -->
   <div class="pane" id="pHelp">
-    <h3>🩺 Ça ne charge pas ?</h3>
-    <div class="muted">Teste la connexion aux serveurs et envoie-moi une capture du résultat.</div>
-    <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
-    <div id="diag"></div>
-    <h3>Démarrage rapide</h3>
-    <div class="muted">
-    1. Déplace la carte sur ta zone : les chemins se chargent tout seuls (zoom 12+).<br>
-    2. <b>🧭 Tracé → Proposer une boucle</b>, ou passe en <b>Tracer</b> et pose tes points.<br>
-    3. Touche un chemin en mode <b>Explorer</b> pour voir son statut et ses photos (Street View, Panoramax…), et le noter « ✓ vérifié » ou « ⛔ interdit ».<br>
-    4. <b>🏍 Balade</b> le jour J : GPS, suivi, alerte hors tracé, enregistrement.<br>
-    5. <b>CarPlay</b> : passe par OsmAnd (explications dans l'onglet 🏍 Balade).<br>
-    <span class="mob-only"><b>Installer sur le téléphone :</b> iPhone → Safari → Partager → « Sur l'écran d'accueil ». Android → Chrome → ⋮ → « Installer l'application ».</span>
-    <span class="pc-only"><b>Installer sur PC :</b> Chrome/Edge → icône d'installation dans la barre d'adresse.</span>
-    </div>
-    <h3>Légende</h3><div id="legend"></div>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-info"/></svg>Démarrage rapide</div>
+      <div class="muted">
+      1. Déplace la carte sur ta zone : les chemins se colorent tout seuls.<br>
+      2. <b>Tracé → Générer ma boucle</b>, ou passe en <b>Tracer</b> et pose tes points.<br>
+      3. En <b>Explorer</b>, touche un chemin : statut, photos (Street View, Panoramax…), et note-le « vérifié » ou « interdit ».<br>
+      4. <b>Balade</b> le jour J : GPS, suivi, alerte hors tracé, enregistrement.<br>
+      <span class="mob-only"><b>Installer :</b> Safari → Partager → « Sur l'écran d'accueil ».</span>
+      <span class="pc-only"><b>Installer sur PC :</b> Chrome/Edge → icône d'installation dans la barre d'adresse.</span>
+      </div>
+      <div class="btns"><button class="btn small" id="bTour">Revoir la présentation</button></div>
+    </section>
+    <section class="card"><div class="card-h"><svg class="ic"><use href="#i-key"/></svg>Légende</div><div id="legend"></div></section>
     <div class="warn"><b>Les couleurs viennent d'OpenStreetMap, pas d'une source officielle.</b> Un chemin vert peut être interdit par un arrêté municipal ou un panneau non cartographié. Le panneau sur place fait toujours foi.</div>
-    <h3>Ce que dit la loi (France)</h3>
-    <div class="muted">
-    • <b>Autorisé</b> (art. L362-1 Code de l'environnement) : routes publiques, <b>chemins ruraux</b> (communaux) et voies privées ouvertes à la circulation. Le hors-piste est interdit.<br>
-    • <b>Le maire ou le préfet peut interdire</b> un chemin ou un secteur : panneau rond B0 (tous véhicules), B7b (véhicules à moteur), B7a (automobiles, donc quads et SSV aussi).<br>
-    • <b>Chemins d'exploitation</b> : privés, réservés aux riverains. Souvent impossibles à distinguer d'un chemin rural sur le terrain.<br>
-    • <b>Forêts domaniales (ONF)</b> : routes forestières privées de l'État, en général fermées aux véhicules à moteur sauf panneau contraire (en violet).<br>
-    • <b>« Sauf véhicules agricoles »</b> : prévu pour l'activité agricole. Un quad homologué tracteur (T3) en balade n'est à mon avis <b>pas</b> couvert. C'est discutable : renseigne-toi en mairie avant.<br>
-    • Engin <b>homologué, immatriculé, assuré</b>, permis adapté, code de la route applicable sur les chemins.<br>
-    • <b>Belgique</b> (frontière à quelques km) : règles différentes, nettement plus restrictives, notamment en forêt wallonne. Non gérées ici.
-    </div>
-    <h3>Repérer un chemin rural</h3>
-    <div class="muted">Active le <b>cadastre</b> (onglet Carte) : un chemin rural est une bande <b>sans numéro de parcelle</b> entre les parcelles. Un chemin qui a son propre numéro est probablement privé. La mairie peut te montrer le tableau des chemins ruraux et les arrêtés de circulation.</div>
-    <h3>Améliorer les données</h3>
-    <div class="muted">Un panneau qui ne correspond pas à la carte ? Note-le dans l'appli (⛔), et corrige OpenStreetMap via le lien « Corriger » (tag <code>motor_vehicle</code>). Toute la communauté en profite.</div>
-    <div class="muted" style="margin-top:12px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v3</div>
+    <details class="card">
+      <summary>Ce que dit la loi</summary>
+      <div class="muted">
+      • <b>Autorisé</b> (art. L362-1 Code de l'environnement) : routes publiques, <b>chemins ruraux</b> (communaux) et voies privées ouvertes à la circulation. Le hors-piste est interdit.<br>
+      • <b>Le maire ou le préfet peut interdire</b> un chemin ou un secteur : panneau rond B0 (tous véhicules), B7b (véhicules à moteur), B7a (automobiles, donc quads et SSV aussi).<br>
+      • <b>Chemins d'exploitation</b> : privés, réservés aux riverains. Souvent impossibles à distinguer d'un chemin rural sur le terrain.<br>
+      • <b>Forêts domaniales (ONF)</b> : routes forestières privées de l'État, en général fermées aux véhicules à moteur sauf panneau contraire (en violet).<br>
+      • <b>« Sauf véhicules agricoles »</b> : prévu pour l'activité agricole. Un quad homologué tracteur (T3) en balade n'est à mon avis <b>pas</b> couvert. C'est discutable : renseigne-toi en mairie avant.<br>
+      • Engin <b>homologué, immatriculé, assuré</b>, permis adapté, code de la route applicable sur les chemins.<br>
+      • <b>Belgique</b> (frontière à quelques km) : règles différentes, nettement plus restrictives, notamment en forêt wallonne. Non gérées ici.
+      </div>
+      <h3>Repérer un chemin rural</h3>
+      <div class="muted">Active le <b>cadastre</b> (onglet Carte) : un chemin rural est une bande <b>sans numéro de parcelle</b> entre les parcelles. Un chemin qui a son propre numéro est probablement privé. La mairie peut te montrer le tableau des chemins ruraux et les arrêtés de circulation.</div>
+      <h3>Améliorer les données</h3>
+      <div class="muted">Un panneau qui ne correspond pas à la carte ? Note-le dans l'appli, et corrige OpenStreetMap via le lien « Corriger » (tag <code>motor_vehicle</code>).</div>
+    </details>
+    <details class="card">
+      <summary>Ça ne charge pas ?</summary>
+      <div class="muted">Teste la connexion aux serveurs et envoie une capture du résultat.</div>
+      <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
+      <div id="diag"></div>
+    </details>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v4</div>
   </div>
 
   </div>
@@ -260,7 +431,7 @@ const CATS={
   mine :{label:'Vérifié par moi ✓',                    color:'#22d3ee',w:5.5, route:true, show:true, locked:'route'},
   open :{label:'Chemin ouvert (accès indiqué)',         color:'#16a34a',w:4.5, route:true, show:true},
   unk  :{label:'Chemin sans restriction connue',        color:'#a3e635',w:3.5, route:true, show:true},
-  agri :{label:'Réservé agricole / forestier',          color:'#f59e0b',w:3.5, dash:'7 5',route:false,show:true},
+  agri :{label:'Réservé agricole / forestier',          color:'#facc15',w:3.5, dash:'7 5',route:false,show:true},
   dom  :{label:'Chemin en forêt domaniale (ONF)',       color:'#c084fc',w:3.5, dash:'2 6',route:false,show:true},
   restr:{label:'Riverains / restreint / saisonnier',    color:'#fb7185',w:3,   dash:'4 4',route:false,show:true},
   road :{label:'Route goudronnée (liaison)',            color:'#60a5fa',w:2.5, route:true, show:false},
@@ -296,7 +467,7 @@ function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pr
    ==================================================================== */
 const $=id=>document.getElementById(id);
 function toast(msg,ms){const t=$('toast');t.textContent=msg;t.style.display='block';clearTimeout(toast._t);if(ms!==0)toast._t=setTimeout(()=>t.style.display='none',ms||3500);}
-function chip(msg){const c=$('chip');if(!msg){c.style.display='none';return;}c.textContent=msg;c.style.display='inline-block';}
+function chip(msg){const c=$('chip');if(!msg){c.style.display='none';return;}c.textContent=msg;c.style.display='inline-flex';}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function hav(a,b){const R=6371000,r=Math.PI/180;const dLa=(b[0]-a[0])*r,dLo=(b[1]-a[1])*r;const s=Math.sin(dLa/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));}
 function dest(p,brg,d){const r=Math.PI/180;return [p[0]+d*Math.cos(brg*r)/111320,p[1]+d*Math.sin(brg*r)/(111320*Math.cos(p[0]*r))];}
@@ -551,7 +722,7 @@ function drawBarrier(id){
   const t=barriers.get(id),p=nodes.get(id);if(!p||drawnBarriers.has(id))return;
   const imp=IMPASSABLE.has(t.barrier),gate=GATE.has(t.barrier);if(!imp&&!gate)return;
   drawnBarriers.add(id);
-  L.circleMarker(p,{renderer,radius:isTouch?6:5,color:'#fff',weight:1.5,fillColor:imp?'#dc2626':'#f59e0b',fillOpacity:1})
+  L.circleMarker(p,{renderer,radius:isTouch?6:5,color:'#fff',weight:1.5,fillColor:imp?'#ef4444':'#facc15',fillOpacity:1})
    .on('click',e=>{L.DomEvent.stopPropagation(e);if(mode==='trace'){addWp(e.latlng);return;}
      L.popup().setLatLng(p).setContent(el(`<b>${imp?'Obstacle infranchissable':'Portail / barrière'}</b><br>barrier=${esc(t.barrier)}${t.access?'<br>access='+esc(t.access):''}${linksHTML(p[0],p[1])}`)).openOn(map);})
    .addTo(barrierLayer);
@@ -684,26 +855,28 @@ function scheduleRoute(){clearTimeout(routeTimer);routeTimer=setTimeout(computeR
 function computeRoute(){
   routeLayer.clearLayers();lastRoute=null;
   if(wps.length<2){showStats();saveDraft();return;}
-  if(!ways.size){showStats('Les chemins ne sont pas encore chargés pour cette zone.');L.polyline(wps,{color:'#e11d8f',weight:3,dashArray:'6 8'}).addTo(routeLayer);return;}
+  if(!ways.size){showStats('Les chemins ne sont pas encore chargés pour cette zone.');L.polyline(wps,{color:'#ff7a1a',weight:3,dashArray:'6 8'}).addTo(routeLayer);return;}
   const r=routeThrough(wps.map(ll2a),$('loop').checked,{noReuse:$('noReuse').checked});
   for(const lg of r.legs)if(lg.fail)L.polyline([lg.a,lg.b],{color:'#dc2626',weight:4,dashArray:'6 8',interactive:false}).addTo(routeLayer);
   if(r.coords.length>1){
     L.polyline(r.coords,{color:'#fff',weight:10,opacity:.9,interactive:false}).addTo(routeLayer);
-    L.polyline(r.coords,{color:'#e11d8f',weight:5.5,interactive:false}).addTo(routeLayer);
+    L.polyline(r.coords,{color:'#ff7a1a',weight:5.5,interactive:false}).addTo(routeLayer);
     const cum=[0];for(let i=1;i<r.coords.length;i++)cum.push(cum[i-1]+hav(r.coords[i-1],r.coords[i]));r.cum=cum;
   }
   lastRoute=r;showStats();saveDraft();
 }
 function showStats(msg){
   const box=$('stats');
-  if(msg){box.textContent=msg;return;}
-  if(!lastRoute){box.textContent=wps.length?`${wps.length} point — ajoute-en un autre.`:'Aucun itinéraire.';return;}
-  const r=lastRoute,road=r.byCat.road||0,h=r.trail/1000/15+road/1000/40;
-  let s=`<span class="big">${km(r.dist)}</span> · ≈ ${dur(h)} · <b>${r.dist?Math.round(r.trail/r.dist*100):0}%</b> de chemins<br>`;
-  s+=Object.keys(CATS).filter(k=>r.byCat[k]).map(k=>`<span style="color:${CATS[k].color}">■</span> ${CATS[k].label} : ${km(r.byCat[k])}`).join('<br>');
-  if(r.gatesN)s+=`<br>⚠️ ${r.gatesN} portail(s) / barrière(s) sur le trajet`;
-  if(r.byCat.agri||r.byCat.dom||r.byCat.restr)s+=`<br>⚠️ Tronçons restreints (orange / violet / rose) : vérifie sur place.`;
-  if(r.fails.length)s+=`<br>❌ Pas de passage autorisé pour le(s) tronçon(s) ${r.fails.map(i=>i+1).join(', ')} : zone pas encore chargée, point trop loin d'un chemin, ou réseau coupé. Le pointillé rouge est une ligne droite indicative.`;
+  if(msg){box.innerHTML=`<div class="empty"><svg class="ic"><use href="#i-info"/></svg><span>${esc(msg)}</span></div>`;return;}
+  if(!lastRoute){box.innerHTML=`<div class="empty"><svg class="ic"><use href="#i-route"/></svg><span>${wps.length?'Encore un point et le tracé apparaît.':'Pas encore d’itinéraire. Génère une boucle ou passe en <b>Tracer</b>.'}</span></div>`;return;}
+  const r=lastRoute,road=r.byCat.road||0,h=r.trail/1000/15+road/1000/40,pct=r.dist?Math.round(r.trail/r.dist*100):0;
+  const ks=Object.keys(CATS).filter(k=>r.byCat[k]);
+  let s=`<div class="kpis"><div><span>Distance</span><b>${km(r.dist)}</b></div><div><span>Durée est.</span><b>${dur(h)}</b></div><div class="hl"><span>Chemins</span><b>${pct} %</b></div></div>
+  <div class="mix">${ks.map(k=>`<i style="flex:${r.byCat[k]};background:${CATS[k].color}" title="${CATS[k].label}"></i>`).join('')}</div>
+  <div class="mixleg">${ks.map(k=>`<span><i style="background:${CATS[k].color}"></i>${CATS[k].label.replace(/ \(.*\)/,'')} · ${km(r.byCat[k])}</span>`).join('')}</div>`;
+  if(r.gatesN)s+=`<div class="note"><svg class="ic"><use href="#i-info"/></svg>${r.gatesN} portail(s) ou barrière(s) sur le trajet.</div>`;
+  if(r.byCat.agri||r.byCat.dom||r.byCat.restr)s+=`<div class="note"><svg class="ic"><use href="#i-info"/></svg>Tronçons restreints (jaune, violet ou rose) : vérifie sur place.</div>`;
+  if(r.fails.length)s+=`<div class="note bad"><svg class="ic"><use href="#i-info"/></svg>Pas de passage autorisé pour le(s) tronçon(s) ${r.fails.map(i=>i+1).join(', ')} : zone non chargée, point trop loin d'un chemin ou réseau coupé (ligne droite rouge indicative).</div>`;
   box.innerHTML=s;
 }
 function saveDraft(){LS.set('pq_draft',{wps:wps.map(ll2a),loop:$('loop').checked});}
@@ -717,12 +890,12 @@ function addWp(ll){
     lastRoute.legs.forEach((lg,i)=>{if(lg.fail)return;for(let k=lg.s;k<lg.e;k++){const d=L.LineUtil.pointToSegmentDistance(P,map.latLngToLayerPoint(lastRoute.coords[k]),map.latLngToLayerPoint(lastRoute.coords[k+1]));if(d<best){best=d;leg=i;}}});
     if(best<(isTouch?22:14)&&leg>=0&&leg<wps.length-1){wps.splice(leg+1,0,ll);drawWps();scheduleRoute();toast('Point inséré dans le tracé.',1500);return;}
   }
-  wps.push(ll);drawWps();scheduleRoute();
+  wps.push(ll);drawWps();scheduleRoute();try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}
 }
 function drawWps(){
   wpLayer.clearLayers();
   wps.forEach((p,i)=>{
-    const m=L.marker(p,{draggable:true,autoPan:true,icon:L.divIcon({className:'',html:`<div class="wp">${i===0?'D':i+1}</div>`,iconSize:[28,28],iconAnchor:[14,14]})});
+    const m=L.marker(p,{draggable:true,autoPan:true,icon:L.divIcon({className:'',html:`<div class="wp${i===0?' s':''}"><span>${i===0?'D':i+1}</span></div>`,iconSize:[32,32],iconAnchor:[16,36]})});
     m.on('dragend',()=>{wps[i]=m.getLatLng();scheduleRoute();});
     m.on('click',ev=>{L.DomEvent.stopPropagation(ev);
       const node=el(`<b>Point ${i===0?'de départ':i+1}</b><div class="links"><button class="r" data-a="del">Supprimer ce point</button>${i>0?'<button data-a="start">En faire le départ</button>':''}</div>${linksHTML(p.lat,p.lng)}`);
@@ -812,7 +985,7 @@ async function wake(on){
 document.addEventListener('visibilitychange',()=>{if(ride&&document.visibilityState==='visible')wake(true);});
 function startRide(resume){
   ride=resume||{t0:Date.now(),pts:[],dist:0,moving:0};
-  rideLayer.clearLayers();ride.line=L.polyline(ride.pts.map(p=>[p[0],p[1]]),{color:'#2563eb',weight:4,opacity:.9,interactive:false}).addTo(rideLayer);
+  rideLayer.clearLayers();ride.line=L.polyline(ride.pts.map(p=>[p[0],p[1]]),{color:'#5b9bff',weight:4,opacity:.9,interactive:false}).addTo(rideLayer);
   startGeo();wake(true);
   $('bRide').textContent='■ Terminer la balade';$('bRide').classList.remove('primary');$('bRide').classList.add('acc');
   $('hud').style.display='flex';$('hRemW').style.display=lastRoute&&lastRoute.cum?'block':'none';
@@ -865,7 +1038,7 @@ map.on('dragstart',()=>{if(ride&&$('follow').checked){$('follow').checked=false;
    RECHERCHE (géocodeur IGN)
    ==================================================================== */
 let sT=null,searchMarker=null;
-$('bSearch').onclick=()=>{const b=$('searchBox');const on=b.style.display!=='block';b.style.display=on?'block':'none';if(on)$('q').focus();};
+$('bSearch').onclick=()=>{const b=$('searchBox');const on=b.style.display!=='block';b.style.display=on?'block':'none';$('bSearch').classList.toggle('on',on);if(on)$('q').focus();};
 $('q').oninput=()=>{clearTimeout(sT);const q=$('q').value.trim();if(q.length<3){$('searchRes').innerHTML='';return;}
   sT=setTimeout(async()=>{try{
     const c=map.getCenter();
@@ -873,7 +1046,7 @@ $('q').oninput=()=>{clearTimeout(sT);const q=$('q').value.trim();if(q.length<3){
     $('searchRes').innerHTML='';
     for(const f of j.features||[]){const d=document.createElement('div');d.className='r';d.textContent=f.properties.label;
       d.onclick=()=>{const[lon,lat]=f.geometry.coordinates;map.setView([lat,lon],f.properties.type==='municipality'?13:16);
-        if(searchMarker)map.removeLayer(searchMarker);searchMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:3,fillColor:'#e11d8f',fillOpacity:1}).addTo(map);
+        if(searchMarker)map.removeLayer(searchMarker);searchMarker=L.circleMarker([lat,lon],{radius:9,color:'#fff',weight:3,fillColor:'#ff7a1a',fillOpacity:1}).addTo(map);
         $('searchBox').style.display='none';};
       $('searchRes').appendChild(d);}
     if(!(j.features||[]).length)$('searchRes').innerHTML='<div class="r">Aucun résultat</div>';
@@ -936,9 +1109,9 @@ function renderSaved(){
     const d=el(`<div class="item"><div class="t">${r.type==='ride'?'🏍 ':'🧭 '}${esc(r.name)}</div><div class="muted">${km(r.dist)} · ${new Date(r.date).toLocaleDateString('fr-FR')}${r.loop?' · boucle':''}</div>
     <div class="btns"><button class="btn small" data-a="load">Afficher</button>${r.type==='ride'?'':'<button class="btn small" data-a="link">🔗</button>'}<button class="btn small" data-a="gpx">GPX</button><button class="btn small" data-a="ren">✎</button><button class="btn small" data-a="del">🗑</button></div></div>`).firstChild;
     d.querySelector('[data-a=load]').onclick=()=>{
-      if(r.type==='ride'){rideLayer.clearLayers();L.polyline(r.coords,{color:'#2563eb',weight:4}).bindPopup(esc(r.name)).addTo(rideLayer);}
+      if(r.type==='ride'){rideLayer.clearLayers();L.polyline(r.coords,{color:'#5b9bff',weight:4}).bindPopup(esc(r.name)).addTo(rideLayer);}
       else{wps=r.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!r.loop;drawWps();
-        if(ways.size)computeRoute();else{routeLayer.clearLayers();L.polyline(r.coords,{color:'#e11d8f',weight:5}).addTo(routeLayer);}
+        if(ways.size)computeRoute();else{routeLayer.clearLayers();L.polyline(r.coords,{color:'#ff7a1a',weight:5}).addTo(routeLayer);}
         ensureTiles(tilesIn(L.latLngBounds(r.coords.length?r.coords:r.wps).pad(0.05)),false,'Chemins');}
       map.fitBounds(L.latLngBounds(r.coords.length?r.coords:r.wps).pad(0.1));if(isTouch)collapse(true);};
     const lk=d.querySelector('[data-a=link]');if(lk)lk.onclick=()=>{wps=r.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!r.loop;drawWps();$('bLink').onclick();};
@@ -1001,7 +1174,7 @@ $('bElev').onclick=async()=>{
     const mn=Math.min(...z),mx=Math.max(...z),W=600,H=110,T=dx[dx.length-1]||1;
     const path=z.map((v,k)=>`${(dx[k]/T*W).toFixed(1)},${(H-8-(v-mn)/((mx-mn)||1)*(H-24)).toFixed(1)}`).join(' L');
     $('profile').innerHTML=`<div class="muted">Altitude ${Math.round(mn)} à ${Math.round(mx)} m · D+ ${Math.round(up)} m · D− ${Math.round(down)} m</div>
-      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="M0,${H} L${path} L${W},${H} Z" fill="#e11d8f33" stroke="#e11d8f" stroke-width="2"/></svg>`;
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="M0,${H} L${path} L${W},${H} Z" fill="#ff7a1a33" stroke="#ff7a1a" stroke-width="2"/></svg>`;
   }catch(err){$('profile').innerHTML='<div class="muted">Profil indisponible ('+esc(err.message)+').</div>';}
 };
 
@@ -1040,7 +1213,7 @@ $('bWipe').onclick=async()=>{
 function setMode(m){mode=m;$('mExplore').classList.toggle('on',m==='explore');$('mTrace').classList.toggle('on',m==='trace');map.getContainer().classList.toggle('trace',m==='trace');map.closePopup();
   if(m==='trace')toast(ways.size?'Touche la carte pour poser des points.':'Pose tes points : les chemins se chargent dès que tu es assez zoomé.');}
 $('mExplore').onclick=()=>setMode('explore');$('mTrace').onclick=()=>setMode('trace');
-function collapse(c){const p=$('panel');p.classList.toggle('collapsed',c);p.classList.remove('full');$('toggle').textContent=c?'▴':'▾';document.body.classList.toggle('pOpen',!c);setTimeout(()=>map.invalidateSize(),250);}
+function collapse(c){const p=$('panel');p.classList.toggle('collapsed',c);p.classList.remove('full');document.body.classList.toggle('pOpen',!c);setTimeout(()=>map.invalidateSize(),250);}
 function showPane(id){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.p===id));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id===id));collapse(false);}
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{if(t.classList.contains('on')&&!$('panel').classList.contains('collapsed')&&isTouch){$('panel').classList.toggle('full');return;}showPane(t.dataset.p);});
 $('toggle').onclick=()=>collapse(!$('panel').classList.contains('collapsed'));
@@ -1059,7 +1232,8 @@ function buildControls(){
   const dc=$('dispCats');dc.innerHTML='';
   for(const k in CATS){const lab=el(`<label class="row"><input type="checkbox" ${CATS[k].show?'checked':''}> ${swatch(k)} ${CATS[k].label}</label>`).firstChild;
     lab.querySelector('input').onchange=e=>{CATS[k].show=e.target.checked;syncVisibility();savePrefs();};dc.appendChild(lab);}
-  $('legend').innerHTML=Object.keys(CATS).map(k=>`<div class="row">${swatch(k)} ${CATS[k].label}</div>`).join('')+`<div class="row"><span class="sw" style="border-color:#e11d8f;border-top-width:6px"></span> Ton itinéraire</div><div class="row"><span class="sw" style="border-color:#2563eb"></span> Ta sortie enregistrée</div>`;
+  $('mapLegend').innerHTML=Object.keys(CATS).map(k=>`<div class="row">${swatch(k)} ${CATS[k].label}</div>`).join('')+`<div class="row"><span class="sw" style="border-color:#ff7a1a;border-top-width:7px"></span> Ton itinéraire</div>`;
+  $('legend').innerHTML=Object.keys(CATS).map(k=>`<div class="row">${swatch(k)} ${CATS[k].label}</div>`).join('')+`<div class="row"><span class="sw" style="border-color:#ff7a1a;border-top-width:6px"></span> Ton itinéraire</div><div class="row"><span class="sw" style="border-color:#5b9bff"></span> Ta sortie enregistrée</div>`;
   const bs=$('bases');bs.innerHTML='';
   for(const n in BASES){const lab=el(`<label class="row"><input type="radio" name="base" ${n===curBase?'checked':''}> ${n}</label>`).firstChild;
     lab.querySelector('input').onchange=()=>{map.removeLayer(BASES[curBase]);curBase=n;BASES[n].addTo(map);BASES[n].bringToBack();savePrefs();};bs.appendChild(lab);}
@@ -1098,6 +1272,35 @@ $('bDiag').onclick=async()=>{
   box.innerHTML=html;
 };
 
+/* ---- nouveaux contrôles : distances rapides, légende, fonds, poignée, présentation ---- */
+function syncChips(){document.querySelectorAll('#kmChips button').forEach(b=>b.classList.toggle('on',b.dataset.km===$('loopKm').value));}
+document.querySelectorAll('#kmChips button').forEach(b=>b.onclick=()=>{$('loopKm').value=b.dataset.km;$('loopKm').oninput();});
+$('loopKm').addEventListener('input',syncChips);
+$('bLegend').onclick=()=>{const l=$('mapLegend'),on=l.style.display!=='block';l.style.display=on?'block':'none';$('bLegend').classList.toggle('on',on);};
+$('mapLegend').onclick=()=>$('bLegend').onclick();
+$('bLayers').onclick=()=>showPane('pLayers');
+(function(){const h=$('handle');let y0=null;
+  h.addEventListener('touchstart',e=>{y0=e.touches[0].clientY;},{passive:true});
+  h.addEventListener('touchend',e=>{if(y0===null)return;const dy=e.changedTouches[0].clientY-y0;y0=null;const p=$('panel');
+    if(Math.abs(dy)<12){collapse(!p.classList.contains('collapsed'));return;}
+    if(dy<0){if(p.classList.contains('collapsed'))collapse(false);else p.classList.add('full');}
+    else{if(p.classList.contains('full'))p.classList.remove('full');else collapse(true);}
+    setTimeout(()=>map.invalidateSize(),300);});
+  h.addEventListener('click',()=>{if(!isTouch)collapse(!$('panel').classList.contains('collapsed'));});})();
+const TOUR=[
+  ['i-route','Bienvenue sur Pistes Quad','Trouve un maximum de chemins autorisés aux quads et SSV autour de chez toi, avec des cartes IGN et les données OpenStreetMap de l’Avesnois intégrées.'],
+  ['i-key','Les couleurs des chemins','<b style="color:#16a34a">Vert</b> : accès autorisé indiqué · <b style="color:#a3e635">vert clair</b> : rien d’interdit connu · <b style="color:#facc15">jaune</b> : agricole · <b style="color:#c084fc">violet</b> : forêt ONF · <b style="color:#ef4444">rouge</b> : interdit. Touche un chemin pour voir ses photos.'],
+  ['i-wand','Ta première boucle','Choisis une distance dans <b>Tracé</b> puis <b>Générer ma boucle</b>. Ou passe en <b style="color:#ff7a1a">Tracer</b> et pose tes points. Le jour J, l’onglet <b>Balade</b> te suit au GPS.']];
+let tourI=0;
+function tour(i){tourI=i;const w=$('welcome');w.style.display='flex';const t=TOUR[i];
+  $('wIc').innerHTML=`<use href="#${t[0]}"/>`;$('wT').textContent=t[1];$('wP').innerHTML=t[2];
+  w.querySelectorAll('.dots i').forEach((d,k)=>d.classList.toggle('on',k===i));
+  $('wNext').textContent=i<TOUR.length-1?'Suivant':'C’est parti !';}
+function endTour(){$('welcome').style.display='none';LS.set('pq_seen4',true);}
+$('wNext').onclick=()=>tourI<TOUR.length-1?tour(tourI+1):endTour();
+$('wSkip').onclick=endTour;
+$('bTour').onclick=()=>tour(0);
+
 /* raccourcis clavier (PC) */
 document.addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea')){if(e.key==='Escape'){e.target.blur();$('searchBox').style.display='none';}return;}
@@ -1117,6 +1320,7 @@ document.addEventListener('keydown',e=>{
   if(prefs.auto===false)$('autoLoad').checked=false;
   if(prefs.pref)$('pref').value=prefs.pref;
   if(prefs.loopKm){$('loopKm').value=prefs.loopKm;$('loopKmV').textContent=prefs.loopKm+' km';}
+  syncChips();showStats();
   if(prefs.noReuse===false)$('noReuse').checked=false;
   buildControls();renderSaved();updateInfo();syncVisibility();
   if(isTouch)collapse(true);else document.body.classList.add('pOpen');
@@ -1125,7 +1329,7 @@ document.addEventListener('keydown',e=>{
   const r=LS.get('pq_ride',null);
   if(r&&r.pts&&r.pts.length&&Date.now()-r.t0<12*3600e3){toast('Balade en cours récupérée.',3000);startRide(r);showPane('pRide');}
   autoLoad();
-  if(!LS.get('pq_seen',false)){LS.set('pq_seen',true);setTimeout(()=>toast('Bienvenue ! Zoome sur ta zone : les chemins se chargent tout seuls. Aide dans l’onglet ❓',6000),700);}
+  if(!LS.get('pq_seen4',false))setTimeout(()=>tour(0),500);
   if('serviceWorker'in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
   if(location.protocol==='file:')setTimeout(()=>toast('Ouvert depuis un fichier : tout marche sauf le hors-ligne et parfois le GPS. Mets-le en ligne pour en profiter à 100 %.',6000),7000);
 })();
