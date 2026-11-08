@@ -474,7 +474,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v8</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v8.1</div>
   </div>
 
   </div>
@@ -648,8 +648,6 @@ function refineAll(){
     }
     if(!any)break;
   }
-  for(const w of ways.values()){if(!GREEN_CATS.has(w.cat))continue;
-    for(const end of [w.nds[0],w.nds[w.nds.length-1]])if((at.get(end)||[]).length===1){w.spur=true;break;}}
   for(const w of changed)if(wayPl.has(w.id)||w.cat!==w.base)drawWay(w);
   graphDirty=true;
 }
@@ -914,7 +912,7 @@ function buildGraph(){
   for(const w of ways.values()){
     if(!CATS[w.cat].route)continue;
     const f=costFactor(w,rp),rd=w.cat==='road'?1:(GREEN_CATS.has(w.cat)?0:2),ow=w.cat==='road'?onewayDir(w.tags):0;
-    if(rd===0&&!w.spur&&!w.sus)for(const n of w.nds)if(!blocked.has(n))green.add(n);
+    if(rd===0&&!w.sus)for(const n of w.nds)if(!blocked.has(n))green.add(n);
     for(let i=0;i<w.nds.length-1;i++){
       const a=w.nds[i],b=w.nds[i+1];if(blocked.has(a)||blocked.has(b))continue;
       const pa=nodes.get(a),pb=nodes.get(b);if(!pa||!pb)continue;
@@ -923,7 +921,43 @@ function buildGraph(){
       if(ow<=0)add(b,a,c+(gates.has(a)?150:0),d,w.id,rd);
     }
   }
-  adj._gates=gates;adj._green=green;graphDirty=false;
+  /* Raccordement des « faux » culs-de-sac : un chemin qui s'arrête à moins de 12 m d'un autre
+     est presque toujours un oubli de raccord dans OpenStreetMap. On le relie au point le plus proche. */
+  for(const v of (buildGraph._virt||[]))nodes.delete(v);buildGraph._virt=[];
+  const nb=u=>{const l=adj.get(u);if(!l)return 0;const s=new Set();for(const e of l)s.add(e[0]);return s.size;};
+  const CY=0.00015,CX=0.00022,cell=(i,j)=>i+'_'+j,G=new Map();
+  for(const[u,l]of adj)for(const e of l){const v=e[0];if(v<u&&adj.get(v)&&adj.get(v).some(x=>x[0]===u))continue;
+    const p=nodes.get(u),q=nodes.get(v);
+    for(let i=Math.floor(Math.min(p[0],q[0])/CY);i<=Math.floor(Math.max(p[0],q[0])/CY);i++)
+      for(let j=Math.floor(Math.min(p[1],q[1])/CX);j<=Math.floor(Math.max(p[1],q[1])/CX);j++){const k=cell(i,j);let c=G.get(k);if(!c){c=[];G.set(k,c);}c.push([u,v,e]);}}
+  let bridges=0;
+  const dead=[];for(const u of adj.keys())if(nb(u)===1)dead.push(u);
+  for(const u of dead){
+    const p=nodes.get(u),own=adj.get(u)[0],ownW=own[3],kx=111320*Math.cos(p[0]*Math.PI/180),ky=110540;
+    let best=null,bd=12;const seen=new Set();
+    const ci=Math.floor(p[0]/CY),cj=Math.floor(p[1]/CX);
+    for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++)for(const sg of (G.get(cell(ci+di,cj+dj))||[])){
+      if(seen.has(sg))continue;seen.add(sg);const[a0,b0,e]=sg;if(a0===u||b0===u||e[3]===ownW)continue;
+      const A=nodes.get(a0),B=nodes.get(b0);
+      const ax=(A[1]-p[1])*kx,ay=(A[0]-p[0])*ky,bx=(B[1]-p[1])*kx,by=(B[0]-p[0])*ky,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;
+      const t=L2?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L2)):0,x=ax+t*dx,y=ay+t*dy,d=Math.hypot(x,y);
+      if(d<bd){bd=d;best={a0,b0,e,t,pt:[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t]};}}
+    if(!best)continue;
+    let target;
+    if(best.t<=0.02)target=best.a0;else if(best.t>=0.98)target=best.b0;
+    else{ // point virtuel sur le segment, relié à ses deux extrémités
+      target=-u;nodes.set(target,best.pt);buildGraph._virt.push(target);
+      const{a0,b0,e}=best,f=e[2]?e[1]/e[2]:1,da=hav(best.pt,nodes.get(a0)),db=hav(best.pt,nodes.get(b0));
+      const back=adj.get(b0)&&adj.get(b0).some(x=>x[0]===a0);
+      add(a0,target,da*f,da,e[3],e[4]);add(target,b0,db*f,db,e[3],e[4]);
+      if(back){add(b0,target,db*f,db,e[3],e[4]);add(target,a0,da*f,da,e[3],e[4]);}
+    }
+    add(u,target,bd*1.5+20,bd,ownW,own[4]);add(target,u,bd*1.5+20,bd,ownW,own[4]);bridges++;
+  }
+  // vrais culs-de-sac (toujours sans issue après raccordement) : pas de point de passage dessus
+  for(const w of ways.values()){if(!CATS[w.cat].route)continue;const a=w.nds[0],b=w.nds[w.nds.length-1];
+    if(nb(a)===1||nb(b)===1){w.spur=true;for(const n of w.nds)green.delete(n);}else w.spur=false;}
+  adj._gates=gates;adj._green=green;adj._bridges=bridges;graphDirty=false;
 }
 function nearestNode(p,maxD,onlyGreen){
   let best=null,bd=Infinity;const cl=Math.cos(p[0]*Math.PI/180);
