@@ -185,6 +185,12 @@ table.tags{border-collapse:collapse;margin-top:6px}table.tags td{padding:1px 8px
 .wp{background:var(--orange);color:#fff;border:3px solid #fff;border-radius:50% 50% 50% 6px;transform:rotate(-45deg);width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px #0009}
 .wp span{transform:rotate(45deg);font-weight:800;font-size:14px}
 .wp.s{background:var(--blue)}
+.wp.a{background:#16a34a}
+.wpd{width:14px;height:14px;border-radius:50%;background:var(--orange);border:3px solid #fff;box-shadow:0 2px 5px #0009}
+.jr .go{background:#16a34a;color:#fff;border-color:#16a34a;font-weight:800;padding:8px 12px}
+#junc .jh .undo{background:#fff;color:#0a1426;font-weight:800}
+.finish{margin-top:10px;padding:12px;border-radius:14px;background:rgba(22,163,74,.12);border:1px solid rgba(22,163,74,.45)}
+.finish .btn{width:100%;justify-content:center;margin-top:8px}
 .me{width:24px;height:24px;position:relative}
 .me .dot{position:absolute;inset:3px;border-radius:50%;background:var(--blue);border:3px solid #fff;box-shadow:0 0 0 8px rgba(47,123,255,.25)}
 .me .arr{position:absolute;left:50%;top:-10px;margin-left:-7px;border:7px solid transparent;border-bottom:11px solid var(--blue);display:none}
@@ -548,7 +554,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v14</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v15</div>
   </div>
 
   </div>
@@ -1245,6 +1251,24 @@ function takeBranch(b){
   legCache.set(wkey(from)+'>'+wkey(to),b.path);
   wps.push(to);drawWps();computeRoute();
   if(map.getZoom()<15)map.setView(end,16);else map.panTo(end);
+  toast('Choix '+(wps.length-1)+' pris ✓ · « ↩ Annuler » si erreur',1600);
+}
+/* ---- Fin du tracé : enregistrer et envoyer vers CarPlay / GPS ---- */
+function finishRoute(){
+  juncHidden=true;preview=null;renderJunction();setMode('explore');
+  showPane('pRoute');
+  const r=lastRoute,box=$('saveBox');if(!box)return;
+  box.innerHTML=`<div class="finish"><b style="font-size:16px">🏁 Itinéraire terminé${r?' · '+km(r.dist):''}</b>
+    <div class="muted" style="margin-top:4px">Pour rouler avec CarPlay ou Android Auto : envoie le fichier GPX dans <b>OsmAnd</b> (gratuit), puis « Suivre la trace ».</div>
+    <button class="btn primary" id="fGpx">🚗 Envoyer vers CarPlay / GPS (GPX)</button>
+    <button class="btn acc" id="fFav">⭐ Garder en favori</button>
+    <button class="btn" id="fLink">🔗 Envoyer le lien (téléphone, copains)</button>
+    <button class="btn ghost" id="fMore">✏️ Continuer le tracé</button></div>`;
+  $('fGpx').onclick=()=>$('bGpx').onclick();
+  $('fFav').onclick=()=>$('bSave').onclick();
+  $('fLink').onclick=()=>$('bLink').onclick();
+  $('fMore').onclick=()=>{box.innerHTML='';juncHidden=false;setMode('trace');renderJunction();};
+  box.scrollIntoView({behavior:'smooth',block:'center'});
 }
 const SHORT={mine:'Vérifié ✓',open:'Chemin ouvert',unk:'Sans restriction connue',agri:'Agricole',dom:'Forêt ONF',restr:'Privé probable',road:'Route',no:'Interdit',bois:'Bois non prouvé'};
 let preview=null;
@@ -1310,10 +1334,13 @@ function renderJunction(){
   preview=null;
   const rows=B.map((b,i)=>{const c=CATS[b.cat];
     return b.off?`<div class="jr off" data-i="${i}"><div class="num">⛔</div><div class="tx"><b>${branchTitle(b)}</b><span>${esc(b.reason||c.label)}</span></div><button class="btn small" style="padding:8px 10px">Voir</button></div>`
-      :`<div class="jr" data-i="${i}"><div class="num" style="background:${c.color}">${b.n}</div><div class="tx"><b>${branchTitle(b)}</b><span>${km(b.len)}${b.dead?' · cul-de-sac':' jusqu’au prochain carrefour'}${b.name?' · '+esc(b.name):''}${b.later.length?' · puis '+b.later.map(k=>(SHORT[k]||k).toLowerCase()).join(', '):''}</span></div><button class="btn small primary" style="padding:8px 10px">Voir</button></div>`;});
-  box.innerHTML=`<div class="jh"><b>${wps.length===1?'Départ':'Carrefour'} · où aller ?</b>${wps.length>1?'<button class="btn small" id="jUndo">↩</button>':''}<button class="btn small ghost" id="jX">✕</button></div>
-    <div class="muted" style="margin:-2px 0 4px">Touche un choix pour le voir avant de décider.${isTouch?'':' (touches 1 à 9)'}</div>${rows.join('')||'<div class="muted">Aucun chemin praticable ici : touche un autre endroit de la carte.</div>'}`;
+      :`<div class="jr" data-i="${i}"><div class="num" style="background:${c.color}">${b.n}</div><div class="tx"><b>${branchTitle(b)}</b><span>${km(b.len)}${b.dead?' · cul-de-sac':' jusqu’au prochain carrefour'}${b.name?' · '+esc(b.name):''}${b.later.length?' · puis '+b.later.map(k=>(SHORT[k]||k).toLowerCase()).join(', '):''}</span></div><button class="btn small primary" style="padding:8px 10px">Voir</button><button class="btn small go" data-go="${i}" title="Prendre ce chemin">✓</button></div>`;});
+  box.innerHTML=`<div class="jh"><b>${wps.length===1?'Départ':'Carrefour'} · où aller ?</b>${wps.length>1?'<button class="btn small undo" id="jUndo">↩ Annuler</button>':''}<button class="btn small ghost" id="jX">✕</button></div>
+    <div class="muted" style="margin:-2px 0 4px">« Voir » pour regarder (photo, Street View), <b style="color:#4ade80">✓</b> pour prendre directement.${isTouch?'':' (touches 1 à 9, Retour arrière = annuler)'}</div>${rows.join('')||'<div class="muted">Aucun chemin praticable ici : touche un autre endroit de la carte.</div>'}
+    ${wps.length>1?'<button class="btn acc wide" id="jEnd" style="margin-top:8px">🏁 Terminer ici</button>':''}`;
   box.querySelectorAll('.jr[data-i]').forEach(r=>r.onclick=()=>openPreview(+r.dataset.i));
+  box.querySelectorAll('[data-go]').forEach(g=>g.onclick=ev=>{ev.stopPropagation();takeBranch(B[+g.dataset.go]);});
+  if($('jEnd'))$('jEnd').onclick=finishRoute;
   $('jX').onclick=()=>{juncHidden=true;renderJunction();toast('Liste masquée : elle revient au prochain point posé.',2500);};
   if($('jUndo'))$('jUndo').onclick=()=>$('bUndo').onclick();
   drawBranches(B,null);
@@ -1459,10 +1486,11 @@ function addWp(ll){
 function drawWps(){
   wpLayer.clearLayers();
   wps.forEach((p,i)=>{
-    const m=L.marker(p,{draggable:true,autoPan:true,icon:L.divIcon({className:'',html:`<div class="wp${i===0?' s':''}"><span>${i===0?'D':i+1}</span></div>`,iconSize:[32,32],iconAnchor:[16,36]})});
+    const last=i===wps.length-1&&i>0,big=i===0||last;
+    const m=L.marker(p,{draggable:true,autoPan:true,zIndexOffset:big?700:0,icon:big?L.divIcon({className:'',html:`<div class="wp${i===0?' s':' a'}"><span>${i===0?'D':'🏁'}</span></div>`,iconSize:[32,32],iconAnchor:[16,36]}):L.divIcon({className:'',html:'<div class="wpd"></div>',iconSize:[14,14],iconAnchor:[7,7]})});
     m.on('dragend',()=>{wps[i]=m.getLatLng();scheduleRoute();});
     m.on('click',ev=>{L.DomEvent.stopPropagation(ev);
-      const node=el(`<b>Point ${i===0?'de départ':i+1}</b><div class="links"><button class="r" data-a="del">Supprimer ce point</button>${i>0?'<button data-a="start">En faire le départ</button>':''}</div>${linksHTML(p.lat,p.lng)}`);
+      const node=el(`<b>${i===0?'Départ':(i===wps.length-1?'Arrivée (dernier choix)':'Choix n° '+i)}</b><div class="links"><button class="r" data-a="del">Supprimer ce point</button>${i>0?'<button data-a="start">En faire le départ</button>':''}</div>${linksHTML(p.lat,p.lng)}`);
       node.querySelector('[data-a=del]').onclick=()=>{wps.splice(i,1);map.closePopup();drawWps();scheduleRoute();};
       const st=node.querySelector('[data-a=start]');if(st)st.onclick=()=>{wps=wps.slice(i).concat(wps.slice(0,i));map.closePopup();drawWps();scheduleRoute();};
       L.popup().setLatLng(p).setContent(node).openOn(map);});
