@@ -2,7 +2,7 @@
    - Coque de l'appli : servie depuis le cache, mise à jour en arrière-plan
    - Tuiles de carte : cache d'abord (hors-ligne), limité en nombre
    - Données (Overpass, géocodage, altitude) : réseau uniquement (l'appli les garde elle-même) */
-const SHELL_CACHE = 'pq-shell-v20';
+const SHELL_CACHE = 'pq-shell-v21';
 const TILE_CACHE = 'pq-tiles';
 const MAX_TILES = 8000;
 const SHELL = [
@@ -11,7 +11,7 @@ const SHELL = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 const TILE_RE = /data\.geopf\.fr\/wmts|tile\.openstreetmap\.org|tile\.opentopomap\.org/;
-const NET_ONLY_RE = /overpass|geocodage|altimetrie|interpreter|nominatim|\/data\/|\/api\/|cdn-cgi|cloudflareaccess/;
+const NET_ONLY_RE = /overpass|geocodage|altimetrie|interpreter|nominatim|\/data\/|\/api\/|cdn-cgi|cloudflareaccess|\.pdf(\?|$)/;
 
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
@@ -69,7 +69,8 @@ self.addEventListener('fetch', e => {
     e.respondWith((async () => {
       const c = await caches.open(SHELL_CACHE);
       const key = sameOrigin ? url.split('#')[0].split('?')[0] : url;
-      const hit = await c.match(key) || (req.mode === 'navigate' ? await c.match('./index.html') : null);
+      const appPage = req.mode === 'navigate' && /\/(index\.html)?$/.test(key);
+      const hit = await c.match(key) || (appPage ? await c.match('./index.html') : null);
       const net = fetch(req).then(r => { if (r && (r.ok || r.type === 'opaque')) c.put(key, r.clone()).catch(() => {}); return r; }).catch(() => null);
       if (hit) { e.waitUntil(net); return hit; }
       return (await net) || Response.error();
