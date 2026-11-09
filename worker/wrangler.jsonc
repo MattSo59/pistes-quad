@@ -1,0 +1,20 @@
+// Configuration du Worker « pistes-quad » (copiée dans la branche publication par GitHub Actions)
+{
+  "name": "pistes-quad",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "kv_namespaces": [
+    { "binding": "DATA", "id": "436fb6b434044298b9be96c808763442" }
+  ],
+  "vars": {
+    "TEAM_DOMAIN": "red-dust-6be7.cloudflareaccess.com",
+    "POLICY_AUD": "595ba4caf6cd32f2c94cda374d2b581c99464adb5b8e244072ac69369f033163"
+  }
+}
