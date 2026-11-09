@@ -4,15 +4,18 @@
 
 ## En bref
 - Appli web (PWA) pour créer des itinéraires quad / SSV sur chemins autorisés autour de Fourmies (Sud-Avesnois).
-- En ligne : https://quad.team-somatcha.fr/ (installable sur iPhone, Android, PC).
+- En ligne : https://mattso59.github.io/pistes-quad/ et https://quad.team-somatcha.fr/ (installables sur iPhone, Android, PC). Connexion avec un compte validé par l'admin.
 - Code : dépôt GitHub public `MattSo59/pistes-quad` (branche `main`). Toute modification poussée est publiée automatiquement (GitHub Actions → branche `publication` → Worker Cloudflare, ~5 min).
-- Version actuelle : v12 (affichée en bas de l'onglet Aide).
+- Version actuelle : v13 (affichée en bas de l'onglet Aide).
 - Règle convenue : **mettre à jour le guide PDF et la présentation de démarrage à chaque changement, sans demander.**
 
-## Hébergement (v12, 9/11/2026)
-- Accès privé et comptes Cloudflare Access **retirés à la demande de l'utilisateur** : appli publique, données sur chaque appareil (localStorage), export/import pour les transférer.
-- Worker Cloudflare `pistes-quad` (actifs statiques seuls), branche `publication` générée par GitHub Actions, adresse `quad.team-somatcha.fr`.
-- Dépôt GitHub passé en privé le 9/11 : GitHub Pages (mattso59.github.io) ne publie plus tant qu'il reste privé.
+## Hébergement et comptes (v13, 9/11/2026)
+- Appli publiée à deux adresses : https://mattso59.github.io/pistes-quad/ (GitHub Pages, dépôt public) et https://quad.team-somatcha.fr/ (Worker Cloudflare `pistes-quad`, branche `publication`). Plus de Cloudflare Access (retiré).
+- Comptes maison : écran de connexion à l'ouverture. « Créer un compte » (prénom, e-mail, mot de passe ≥ 8) → compte **en attente** ; l'admin (`ADMIN_EMAIL` = djprofusion@me.com, validé d'office) valide / refuse / supprime dans Tracés → Mon compte → Comptes.
+- API dans `worker/worker.js` sur quad.team-somatcha.fr/api (CORS autorisé pour github.io) : register, login (jeton 60 jours), me, logout, password, data, admin/users, admin/user. Mots de passe PBKDF2-SHA256 100 000 itérations + sel ; 10 essais ratés → blocage 15 min.
+- KV `DATA` → `pistes-quad-donnees` : `acct:<email>`, `sess:<jeton>`, `data:<email>`, `fail:<email>`.
+- Données synchronisées par compte (historique, favoris, notes, sorties, points vus). Hors ligne : l'appli reste utilisable si on s'est connecté une fois sur l'appareil. Déconnexion = données effacées de l'appareil (gardées sur le compte).
+- Limite : le code de l'appli et les tuiles OSM restent publics (dépôt public) ; ce sont les données des utilisateurs qui sont privées. Mot de passe oublié : l'admin supprime le compte, la personne se réinscrit.
 
 ## Organisation du dépôt
 - `site/index.html` : toute l'appli (HTML + CSS + JS, Leaflet 1.9.4 via unpkg).
