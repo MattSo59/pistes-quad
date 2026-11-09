@@ -4,18 +4,15 @@
 
 ## En bref
 - Appli web (PWA) pour créer des itinéraires quad / SSV sur chemins autorisés autour de Fourmies (Sud-Avesnois).
-- En ligne (privé, connexion par e-mail) : https://quad.team-somatcha.fr/ (installable sur iPhone, Android, PC). Ancienne adresse publique, à fermer : https://mattso59.github.io/pistes-quad/
+- En ligne : https://quad.team-somatcha.fr/ (installable sur iPhone, Android, PC).
 - Code : dépôt GitHub public `MattSo59/pistes-quad` (branche `main`). Toute modification poussée est publiée automatiquement (GitHub Actions → branche `publication` → Worker Cloudflare, ~5 min).
-- Version actuelle : v11 (affichée en bas de l'onglet Aide).
+- Version actuelle : v12 (affichée en bas de l'onglet Aide).
 - Règle convenue : **mettre à jour le guide PDF et la présentation de démarrage à chaque changement, sans demander.**
 
-## Accès privé et comptes (en service depuis le 9/11/2026)
-- Worker Cloudflare `pistes-quad` (compte Team Somatcha), branche de production `publication` générée par GitHub Actions (contenu de `site/` + `worker/worker.js`, `worker/wrangler.jsonc`, `worker/.assetsignore`). Adresse `quad.team-somatcha.fr` ; `workers.dev` coupé.
-- Verrou : application Access « Pistes Quad » (équipe Zero Trust `red-dust-6be7.cloudflareaccess.com`), session 1 mois, politique « Utilisateurs autorises » (Include → E-mails). Connexion : code à usage unique par e-mail, ou compte Cloudflare.
-- **Ajouter un utilisateur** : Cloudflare → Zero Trust → Contrôles Access → Politiques → « Utilisateurs autorises » → ajouter son e-mail. Chacun a ses propres données.
-- Données par utilisateur : `worker/worker.js` (`/api/data`) + KV `DATA` → `pistes-quad-donnees`, clé `user:<email>`. Jeton Access vérifié (signature, AUD, expiration) ; variables `TEAM_DOMAIN`, `POLICY_AUD` dans `wrangler.jsonc`.
-- L'appli synchronise historique, favoris, notes de chemins, sorties GPS, points vus (fusion par date, suppressions respectées). Sans serveur (ancienne adresse github.io) : mode local.
-- Reste à faire : importer les tracés de l'ancienne adresse, puis passer le dépôt GitHub en privé (GitHub Pages s'arrête alors).
+## Hébergement (v12, 9/11/2026)
+- Accès privé et comptes Cloudflare Access **retirés à la demande de l'utilisateur** : appli publique, données sur chaque appareil (localStorage), export/import pour les transférer.
+- Worker Cloudflare `pistes-quad` (actifs statiques seuls), branche `publication` générée par GitHub Actions, adresse `quad.team-somatcha.fr`.
+- Dépôt GitHub passé en privé le 9/11 : GitHub Pages (mattso59.github.io) ne publie plus tant qu'il reste privé.
 
 ## Organisation du dépôt
 - `site/index.html` : toute l'appli (HTML + CSS + JS, Leaflet 1.9.4 via unpkg).

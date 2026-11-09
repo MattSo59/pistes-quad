@@ -446,10 +446,6 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
 
   <!-- ============ MES TRACÉS ============ -->
   <div class="pane" id="pSaved">
-    <section class="card" id="account">
-      <div class="card-h"><svg class="ic"><use href="#i-info"/></svg>Mon compte</div>
-      <div id="accInfo" class="muted">Mode local : tes données restent sur cet appareil.</div>
-    </section>
     <section class="card">
       <div class="card-h"><svg class="ic"><use href="#i-saved"/></svg>Favoris ⭐</div>
       <div id="favList"></div>
@@ -517,7 +513,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v11</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v12</div>
   </div>
 
   </div>
@@ -1638,72 +1634,10 @@ function readHash(){
   toast('Itinéraire reçu : calcul dès que les chemins sont chargés.',4000);return true;
 }
 
-/* ---- Compte et synchronisation (Cloudflare Access + stockage par utilisateur) ---- */
-const SYNC={on:false,email:null,t:null,last:0,pulled:0,err:''};
-let tombs=LS.get('pq_tombs',{});
-function tomb(k){tombs[k]=Date.now();LS.set('pq_tombs',tombs);}
-function saveNotes(){LS.set('pq_notes',notes);syncSoon();}
-function syncSoon(){if(!SYNC.on)return;clearTimeout(SYNC.t);SYNC.t=setTimeout(syncPush,3000);}
-function localState(){return{v:4,upd:Date.now(),hist,notes,rides:LS.get('pq_routes',[]).filter(r=>r.type==='ride'),seen:seenPts,tombs};}
-async function syncPush(){
-  try{const r=await fetch('api/data',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(localState())});
-    if(r.ok){SYNC.last=Date.now();SYNC.err='';}else SYNC.err='enregistrement refusé ('+r.status+')';}
-  catch(e){SYNC.err='hors ligne, nouvel essai plus tard';}
-  renderAccount();
-}
-function mergeRemote(d){
-  if(!d)return false;let changed=false;
-  for(const k in d.tombs||{})if(!tombs[k]||tombs[k]<d.tombs[k]){tombs[k]=d.tombs[k];changed=true;}
-  LS.set('pq_tombs',tombs);
-  // itinéraires : union, la version la plus récente gagne, les suppressions sont respectées
-  const byId=new Map(hist.map(h=>[h.id,h]));
-  for(const h of d.hist||[]){const mine=byId.get(h.id);if(!mine||(h.upd||0)>(mine.upd||0)){byId.set(h.id,h);changed=true;}}
-  hist=[...byId.values()].filter(h=>!tombs['h:'+h.id]);
-  // notes de chemins
-  const touched=[];
-  for(const id in d.notes||{}){const n=d.notes[id];if(!notes[id]||(n.d||0)>(notes[id].d||0)){notes[id]=n;touched.push(id);}}
-  for(const id in notes)if(tombs['n:'+id]&&tombs['n:'+id]>(notes[id].d||0)){delete notes[id];touched.push(id);}
-  if(touched.length){LS.set('pq_notes',notes);for(const id of touched){const w=ways.get(+id);if(w){classifyWay(w);drawWay(w);}}refineAll();graphDirty=true;changed=true;}
-  // sorties GPS
-  const rides=LS.get('pq_routes',[]),have=new Set(rides.map(r=>r.date));
-  for(const r of d.rides||[])if(!have.has(r.date)&&!tombs['r:'+r.date]){rides.push(r);changed=true;}
-  LS.set('pq_routes',rides.filter(r=>!tombs['r:'+r.date]).sort((a,b)=>b.date-a.date));
-  for(const k in d.seen||{})if(!seenPts[k]){seenPts[k]=d.seen[k];changed=true;}
-  LS.set('pq_seen_pts',seenPts);
-  LS.set('pq_hist',hist);
-  return changed;
-}
-async function syncPull(){
-  if(location.protocol==='file:')return;
-  try{
-    const r=await fetch('api/data',{cache:'no-store',credentials:'same-origin'});
-    const ct=r.headers.get('Content-Type')||'';
-    if(!ct.includes('json')){SYNC.on=false;renderAccount();return;}   // pas de serveur (ancienne adresse) : mode local
-    const j=await r.json();SYNC.email=j.email||null;
-    if(!r.ok){SYNC.on=false;SYNC.err=r.status===503?'stockage pas encore configuré':(j.configured===false?'serveur pas encore configuré':'non connecté');renderAccount();return;}
-    SYNC.on=true;SYNC.pulled=Date.now();SYNC.err='';
-    const changed=mergeRemote(j.data);
-    renderHist();renderSaved();updateInfo();drawFavs();
-    if(!j.data||changed)syncPush();   // première connexion : on envoie ce qui est sur l'appareil
-    renderAccount();
-  }catch(e){renderAccount();}
-}
-function renderAccount(){
-  const box=$('accInfo');if(!box)return;
-  if(SYNC.on){
-    const ago=SYNC.last?Math.max(0,Math.round((Date.now()-SYNC.last)/60000)):null;
-    box.className='';
-    box.innerHTML=`<div style="font-weight:800;font-size:15px">${esc(SYNC.email)}</div>
-      <div class="muted">${SYNC.err?'⚠️ '+esc(SYNC.err):'✅ Tes tracés, favoris, notes et sorties sont sauvegardés et synchronisés sur tous tes appareils.'}${ago!=null&&!SYNC.err?' Dernier envoi : '+(ago?'il y a '+ago+' min':'à l’instant')+'.':''}</div>
-      <div class="btns"><button class="btn small" id="accSync">↻ Synchroniser</button><a class="btn small" href="/cdn-cgi/access/logout" style="text-decoration:none">Se déconnecter</a></div>`;
-    $('accSync').onclick=async()=>{await syncPush();await syncPull();toast('Synchronisé ✓',1500);};
-  }else{
-    box.className='muted';
-    box.innerHTML=SYNC.email?`Connecté en tant que <b>${esc(SYNC.email)}</b>, mais ${esc(SYNC.err)} : les données restent sur cet appareil pour l’instant.`
-      :'Mode local : tes données restent sur cet appareil. Avec l’accès privé (quad.team-somatcha.fr), elles sont sauvegardées dans ton compte et synchronisées entre téléphone et PC.';
-  }
-}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-SYNC.pulled>60000)syncPull();});
+/* ---- Données sur l'appareil (pas de compte) ---- */
+function tomb(k){}
+function saveNotes(){LS.set('pq_notes',notes);}
+function syncSoon(){}
 
 /* ---- Sorties enregistrées (balades GPS) ---- */
 function saved(){return LS.get('pq_routes',[]).filter(r=>r.type==='ride');}
@@ -2008,7 +1942,7 @@ document.addEventListener('keydown',e=>{
   if(prefs.loopKm){$('loopKm').value=prefs.loopKm;$('loopKmV').textContent=prefs.loopKm+' km';}
   syncChips();showStats();
   if(prefs.noReuse===false)$('noReuse').checked=false;
-  buildControls();renderSaved();renderHist();updateInfo();syncVisibility();renderAccount();syncPull();
+  buildControls();renderSaved();renderHist();updateInfo();syncVisibility();
   if(isTouch)collapse(true);else document.body.classList.add('pOpen');
   const got=readHash();
   if(!got){const d=LS.get('pq_draft',null);if(d&&d.wps&&d.wps.length){wps=d.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!d.loop;seedLegs(d.lp);drawWps();}}
