@@ -6,7 +6,7 @@
 - Appli web (PWA) pour créer des itinéraires quad / SSV sur chemins autorisés autour de Fourmies (Sud-Avesnois).
 - En ligne : https://mattso59.github.io/pistes-quad/ (installable sur iPhone, Android, PC).
 - Code : dépôt GitHub public `MattSo59/pistes-quad` (branche `main`). Toute modification poussée est publiée automatiquement (GitHub Actions → GitHub Pages, ~4 min).
-- Version actuelle : v8.1 (affichée en bas de l'onglet Aide).
+- Version actuelle : v9 (affichée en bas de l'onglet Aide).
 - Règle convenue : **mettre à jour le guide PDF et la présentation de démarrage à chaque changement, sans demander.**
 
 ## Organisation du dépôt
@@ -26,20 +26,23 @@
 Catégories utilisées par défaut dans les tracés : vérifié, ouvert, sans restriction connue, routes (liaison).
 
 ## Calcul des itinéraires
-- A* sur graphe des chemins autorisés ; routes ×3 en génération ; points de passage accrochés seulement sur chemins verts traversants.
-- Génération de boucle : jusqu'à 45 essais (3 à 5 points sur un cercle), score = part de vert + respect de la distance − restreints.
+- **Pas de génération automatique** (retirée en v9 à la demande de l'utilisateur : trop d'erreurs, difficile à corriger).
+- Construction **carrefour par carrefour** : depuis le bout du tracé, liste des chemins possibles jusqu'au prochain carrefour (direction, type, longueur, Street View orienté vers le chemin), interdits listés en grisé ; toucher un choix ajoute l'étape (chemin figé dans legCache). Bouton Boucler = retour au départ par A*.
+- Toucher la carte plus loin = étape calculée par A* (routes ×2 à ×3, chemins verts favorisés).
 - Tracé figé : chaque étape garde son chemin ; seules les étapes modifiées sont recalculées ; un tronçon devenu interdit est contourné au plus près (patchPath).
-- Faux culs-de-sac (< 12 m d'un autre chemin) raccordés ; vrais culs-de-sac écartés des points de passage.
-- Points de contrôle Street View à chaque virage (≥ 35° à un carrefour) et entrée de chemin, caméra orientée vers le chemin.
+- Faux culs-de-sac (< 12 m d'un autre chemin) raccordés, y compris au milieu d'un segment.
+- Points de contrôle Street View à chaque virage (≥ 35° à un carrefour) et entrée de chemin, caméra orientée vers le chemin ; retour automatique au point après Street View.
 
 ## Fonctions principales
-Boucle auto (15–80 km), tracé manuel, tracé coloré par type, points de contrôle + Street View (lien ou intégré avec clé Google Maps Embed API, champ « Carte → Données »), retour automatique au point après Street View, historique automatique (30) + favoris ⭐, affichage des favoris sur la carte, mode Balade (GPS, alerte hors tracé, enregistrement), GPX / OsmAnd (CarPlay), lien de partage, export/import des données, hors-ligne (cartes IGN + chemins), profil altimétrique IGN, guide PDF.
+Tracé carrefour par carrefour, tracé manuel libre, tracé coloré par type, points de contrôle + Street View (lien ou intégré avec clé Google Maps Embed API, champ « Carte → Données »), retour automatique au point après Street View, historique automatique (30) + favoris ⭐, affichage des favoris sur la carte, mode Balade (GPS, alerte hors tracé, enregistrement), GPX / OsmAnd (CarPlay), lien de partage, export/import des données, hors-ligne (cartes IGN + chemins), profil altimétrique IGN, guide PDF.
 
 ## Historique des décisions
 - Hébergement : d'abord Cloudflare (abandonné), la section « mini » du site de gestion bloque tout appel réseau (CSP `connect-src 'none'`), d'où GitHub Pages.
 - Serveurs Overpass publics trop saturés → données pré-calculées chaque mois par GitHub (Overpass reste un secours hors zone).
 - CarPlay impossible pour une appli web → export GPX vers OsmAnd.
-- IA (LLM / analyse Street View) : jugée non utile pour le tracé, écartée par l'utilisateur.
+- IA (LLM / analyse Street View, détection Mapillary) : écartée par l'utilisateur.
+- Clé Google Maps Embed (Street View intégré) : l'utilisateur préfère ne pas l'utiliser (carte bancaire) ; l'appli fonctionne sans.
+- Génération automatique de boucles : retirée en v9.
 - Dépôt privé + site public = GitHub Pro payant ; alternative gratuite possible via Cloudflare (non faite).
 
 ## Limites connues
