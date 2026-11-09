@@ -6,7 +6,7 @@
 - Appli web (PWA) pour créer des itinéraires quad / SSV sur chemins autorisés autour de Fourmies (Sud-Avesnois).
 - En ligne : https://mattso59.github.io/pistes-quad/ (installable sur iPhone, Android, PC).
 - Code : dépôt GitHub public `MattSo59/pistes-quad` (branche `main`). Toute modification poussée est publiée automatiquement (GitHub Actions → GitHub Pages, ~4 min).
-- Version actuelle : v9 (affichée en bas de l'onglet Aide).
+- Version actuelle : v10 (affichée en bas de l'onglet Aide).
 - Règle convenue : **mettre à jour le guide PDF et la présentation de démarrage à chaque changement, sans demander.**
 
 ## Organisation du dépôt
@@ -27,7 +27,7 @@ Catégories utilisées par défaut dans les tracés : vérifié, ouvert, sans re
 
 ## Calcul des itinéraires
 - **Pas de génération automatique** (retirée en v9 à la demande de l'utilisateur : trop d'erreurs, difficile à corriger).
-- Construction **carrefour par carrefour** : depuis le bout du tracé, liste des chemins possibles jusqu'au prochain carrefour (direction, type, longueur, Street View orienté vers le chemin), interdits listés en grisé ; toucher un choix ajoute l'étape (chemin figé dans legCache). Bouton Boucler = retour au départ par A*.
+- Construction **carrefour par carrefour** : depuis le bout du tracé, liste des chemins possibles jusqu'au prochain carrefour (direction, type, longueur, Street View orienté vers le chemin), interdits listés en grisé ; toucher un choix ouvre d'abord un **aperçu** (chemin surligné, photo Panoramax si dispo, Street View orienté, ✓ Oui / ✗ Non / ⛔ Panneau) ; « Oui » ajoute l'étape (chemin figé dans legCache). Suivi « Tracé en cours » (étapes, ✂ couper ici) dans l'onglet Tracé, à droite sur PC. Bouton Boucler = retour au départ par A*.
 - Toucher la carte plus loin = étape calculée par A* (routes ×2 à ×3, chemins verts favorisés).
 - Tracé figé : chaque étape garde son chemin ; seules les étapes modifiées sont recalculées ; un tronçon devenu interdit est contourné au plus près (patchPath).
 - Faux culs-de-sac (< 12 m d'un autre chemin) raccordés, y compris au milieu d'un segment.

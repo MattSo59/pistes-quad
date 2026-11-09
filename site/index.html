@@ -215,7 +215,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
 /* carrefour par carrefour */
 #junc{position:fixed;left:8px;right:8px;bottom:calc(92px + var(--sb));z-index:1001;border-radius:18px;padding:10px 10px 6px;display:none;max-height:46vh;overflow:auto}
 @media (min-width:761px){#junc{left:12px;right:auto;width:400px;bottom:16px}}
-body.pOpen #junc{display:none!important}
+@media (max-width:760px){body.pOpen #junc{display:none!important}}
 #junc .jh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 #junc .jh b{flex:1;font-size:15px}
 #junc .jh button{padding:7px 10px;font-size:13px}
@@ -226,6 +226,29 @@ body.pOpen #junc{display:none!important}
 .jr a{width:40px;height:40px;border-radius:11px;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}
 .jr.off{opacity:.55;cursor:default}.jr.off .num{background:#ef4444!important;color:#fff}
 .bm{width:24px;height:24px;border-radius:50%;border:3px solid #fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;color:#0a1426;box-shadow:0 2px 6px #000a}
+/* aperçu d'un choix */
+.pv .pvh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pv .pvh b{flex:1;font-size:16px}
+.pv .tag{display:inline-block;padding:3px 9px;border-radius:999px;font-weight:800;font-size:12.5px;color:#0a1426;margin-right:6px}
+.pv .meta{font-size:13px;color:#cfe0ff;margin:6px 0}
+.pv .photo{margin:8px 0;border-radius:12px;overflow:hidden;background:#000;position:relative;min-height:0}
+.pv .photo img{width:100%;max-height:190px;object-fit:cover;display:block}
+.pv .photo span{position:absolute;left:8px;bottom:6px;font-size:11px;background:#000a;padding:2px 6px;border-radius:6px}
+.pv iframe{width:100%;height:220px;border:0;border-radius:12px;margin:8px 0}
+.pv .q{font-weight:800;font-size:15px;margin:10px 0 6px}
+.pv .yn{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pv .yn .btn{padding:12px 6px}
+.pv .sv{margin-top:6px}
+/* suivi du tracé en cours */
+.tl{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+.tl .row{display:flex;align-items:center;gap:9px;padding:6px 0;position:relative}
+.tl .dot{width:24px;height:24px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11.5px;color:#0a1426;z-index:1}
+.tl .row:not(:last-child)::after{content:"";position:absolute;left:11px;top:30px;bottom:-6px;width:2px;background:var(--line)}
+.tl .tx{flex:1;min-width:0}.tl .tx b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tl .tx span{font-size:12px;color:var(--muted)}
+.tl .acts{display:flex;gap:5px}.tl .acts a,.tl .acts button{width:32px;height:32px;border-radius:9px;background:var(--card2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;font-size:13px}
+.tl .acts a{background:var(--blue);border-color:var(--blue)}
+.tl .acts .ic{width:17px;height:17px}
+.tl .head{display:flex;justify-content:space-between;align-items:center;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue2);font-weight:800;margin-bottom:4px}
 /* accueil */
 #welcome{position:fixed;inset:0;z-index:2000;background:rgba(5,10,22,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + var(--sb))}
 @media (min-width:761px){#welcome{align-items:center}}
@@ -317,7 +340,7 @@ body.pOpen #junc{display:none!important}
   <div class="pane on" id="pRoute">
     <div id="loadErr"></div>
     <div id="histStrip"></div>
-    <section class="card hero">
+    <section class="card hero" id="startCard">
       <div class="hero-t"><div class="badge"><svg class="ic"><use href="#i-pencil"/></svg></div><div><b>Construire mon itinéraire</b><span>Carrefour par carrefour, avec Street View tourné vers chaque chemin.</span></div></div>
       <div class="muted" style="color:#cfe0ff">1. Passe en <b>Tracer</b> et touche la carte pour placer ton départ.<br>2. Choisis un chemin dans la liste en bas de la carte, et ainsi de suite.<br>3. <b>Boucler</b> te ramène au départ par le plus vert.</div>
       <div class="row2" style="margin-top:12px"><button class="btn acc wide" id="bStart"><svg class="ic"><use href="#i-pencil"/></svg>Commencer un tracé</button></div>
@@ -327,6 +350,7 @@ body.pOpen #junc{display:none!important}
     <section class="card">
       <div class="card-h"><svg class="ic"><use href="#i-route"/></svg>Mon itinéraire</div>
       <div id="stats"></div>
+      <div id="timeline"></div>
       <div class="toolbar">
         <button class="btn" id="bUndo"><svg class="ic"><use href="#i-undo"/></svg>Annuler</button>
         <button class="btn" id="bRev"><svg class="ic"><use href="#i-swap"/></svg>Inverser</button>
@@ -489,7 +513,7 @@ body.pOpen #junc{display:none!important}
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v9</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v10</div>
   </div>
 
   </div>
@@ -1173,7 +1197,7 @@ function branchesFrom(E,prev){
   for(const w of (nodeIdx.get(E)||[])){if(CATS[w.cat].route||seen.has(w.id))continue;seen.add(w.id);
     const k=w.nds.indexOf(E);for(const j of [k-1,k+1]){if(j<0||j>=w.nds.length)continue;const q=nodes.get(w.nds[j]);if(!q)continue;
       const cs=[pE];let acc=0;for(let t=j;t>=0&&t<w.nds.length&&acc<120;t+=(j>k?1:-1)){const r=nodes.get(w.nds[t]);if(!r)break;acc+=hav(cs[cs.length-1],r);cs.push(r);}
-      const head=Math.round(brg(pE,alongPt(cs,25)));out.push({off:true,cat:w.cat,head,dir:relDir(inB,head),name:w.tags.name||'',reason:w.reason,cs});}}
+      const head=Math.round(brg(pE,alongPt(cs,25)));out.push({off:true,cat:w.cat,head,dir:relDir(inB,head),name:w.tags.name||'',reason:w.reason,cs,ways:new Set([w.id]),len:acc});}}
   const rank=b=>b.off?9:GREEN_CATS.has(b.cat)?(b.dead?3:0):b.cat==='road'?2:4;
   out.sort((a,b)=>rank(a)-rank(b)||(a.dir==='tout droit'?-1:0));
   return out;
@@ -1188,36 +1212,106 @@ function takeBranch(b){
   if(map.getZoom()<15)map.setView(end,16);else map.panTo(end);
 }
 const SHORT={mine:'Vérifié ✓',open:'Chemin ouvert',unk:'Sans restriction connue',agri:'Agricole',dom:'Forêt ONF',restr:'Privé probable',road:'Route',no:'Interdit',bois:'Bois non prouvé'};
+let preview=null;
+const cap=t=>t?t[0].toUpperCase()+t.slice(1):'';
+function branchTitle(b){return (b.dir?cap(b.dir)+' · ':'')+(b.off?(b.cat==='no'?'Interdit':(SHORT[b.cat]||'')+' (exclu)'):(SHORT[b.cat]||''));}
+function drawBranches(B,focus){
+  branchLayer.clearLayers();
+  B.forEach((b,i)=>{const c=CATS[b.cat],f=focus==null||focus===i,col=b.off?'#ef4444':c.color;
+    const cs=focus===i?b.cs:b.cs.slice(0,Math.max(2,b.cs.length));
+    L.polyline(cs,{color:'#fff',weight:f?12:8,opacity:f?.7:.25,interactive:false}).addTo(branchLayer);
+    L.polyline(cs,{color:col,weight:f?6:4,opacity:f?1:.45,dashArray:focus===i?null:'1 9',lineCap:'round',interactive:false}).addTo(branchLayer);
+    if(focus!=null&&focus!==i)return;
+    const at=alongPt(b.cs,Math.min(60,(b.len||60)*0.5));
+    L.marker(at,{zIndexOffset:900,icon:L.divIcon({className:'',html:`<div class="bm" style="background:${col};color:${b.off?'#fff':'#0a1426'}">${b.off?'⛔':b.n}</div>`,iconSize:[24,24],iconAnchor:[12,12]})})
+      .on('click',e=>{L.DomEvent.stopPropagation(e);openPreview(i);}).addTo(branchLayer);});
+}
+function openPreview(i){preview=i;juncHidden=false;renderJunction();}
+function closePreview(){preview=null;renderJunction();}
+function loadPanoramax(pt,box){
+  const d=0.0005,url=`https://api.panoramax.xyz/api/search?bbox=${pt[1]-d},${pt[0]-d},${pt[1]+d},${pt[0]+d}&limit=8`;
+  fetch(url).then(r=>r.ok?r.json():null).then(j=>{
+    const fs=(j&&j.features)||[];if(!fs.length||!box.isConnected)return;
+    let best=null,bd=1e9;for(const f of fs){const c=f.geometry&&f.geometry.coordinates;if(!c)continue;const dd=hav(pt,[c[1],c[0]]);if(dd<bd){bd=dd;best=f;}}
+    const th=best&&best.assets&&((best.assets.thumb&&best.assets.thumb.href)||(best.assets.sd&&best.assets.sd.href));if(!th)return;
+    const dt=best.properties&&best.properties.datetime?new Date(best.properties.datetime).toLocaleDateString('fr-FR',{month:'short',year:'numeric'}):'';
+    box.innerHTML=`<a href="https://api.panoramax.xyz/#focus=pic&pic=${best.id}" target="_blank" rel="noopener"><img src="${th}" alt="Photo Panoramax"><span>Photo Panoramax ${dt} · à ${Math.round(bd)} m</span></a>`;
+  }).catch(()=>{});
+}
 function renderJunction(){
   const box=$('junc');branchLayer.clearLayers();
-  if(mode!=='trace'||juncHidden||!wps.length){box.style.display='none';return;}
-  if($('loop').checked&&wps.length>1){box.innerHTML=`<div class="jh"><b>Boucle fermée ✓</b><button class="btn small" id="jOpen">Continuer depuis l’arrivée</button><button class="btn small ghost" id="jX">✕</button></div>`;
+  if(mode!=='trace'||juncHidden||!wps.length){box.style.display='none';preview=null;return;}
+  if($('loop').checked&&wps.length>1){preview=null;box.innerHTML=`<div class="jh"><b>Boucle fermée ✓</b><button class="btn small" id="jOpen">Continuer depuis l’arrivée</button><button class="btn small ghost" id="jX">✕</button></div>`;
     box.style.display='block';$('jOpen').onclick=()=>{$('loop').checked=false;computeRoute();};$('jX').onclick=()=>{juncHidden=true;renderJunction();};return;}
   const re=routeEnd();
   if(!re){box.innerHTML=`<div class="jh"><b>Pas de chemin chargé ici</b><button class="btn small ghost" id="jX">✕</button></div><div class="muted">Zoome un peu : les chemins se chargent, puis touche la carte près d’un chemin.</div>`;box.style.display='block';$('jX').onclick=()=>{juncHidden=true;renderJunction();};return;}
-  const B=branchesFrom(re.E,re.prev);juncBranches=B;
-  let n=0;
-  const rows=B.map((b,i)=>{const c=CATS[b.cat];
-    if(b.off)return`<div class="jr off"><div class="num">⛔</div><div class="tx"><b>${b.dir?b.dir[0].toUpperCase()+b.dir.slice(1)+' · ':''}${b.cat==='no'?'interdit':(SHORT[b.cat]||'')+' (exclu)'}</b><span>${esc(b.reason||c.label)}</span></div><a href="${juncSV(re.E,re.prev,b)}" target="_blank" rel="noopener" title="Street View"><svg class="ic"><use href="#i-cam"/></svg></a></div>`;
-    b.n=++n;
-    return`<div class="jr" data-i="${i}"><div class="num" style="background:${c.color}">${b.n}</div><div class="tx"><b>${b.dir?b.dir[0].toUpperCase()+b.dir.slice(1)+' · ':''}${SHORT[b.cat]||esc(c.label)}</b><span>${km(b.len)}${b.dead?' · cul-de-sac':' jusqu’au prochain carrefour'}${b.name?' · '+esc(b.name):''}${b.later.length?' · puis '+b.later.map(k=>(SHORT[k]||k).toLowerCase()).join(', '):''}</span></div><a href="${juncSV(re.E,re.prev,b)}" target="_blank" rel="noopener" title="Street View vers ce chemin" data-sv="1"><svg class="ic"><use href="#i-cam"/></svg></a></div>`;});
-  box.innerHTML=`<div class="jh"><b>${wps.length===1?'Départ':'Carrefour'} · ${n} choix</b>${wps.length>1?'<button class="btn small" id="jUndo">↩</button><button class="btn small acc" id="jLoop">Boucler</button>':''}<button class="btn small ghost" id="jX">✕</button></div>${rows.join('')||'<div class="muted">Aucun chemin praticable ici : touche un autre endroit de la carte.</div>'}`;
+  const B=branchesFrom(re.E,re.prev);juncBranches=B;let n=0;B.forEach(b=>{if(!b.off)b.n=++n;});
   box.style.display='block';
-  box.querySelectorAll('.jr[data-i]').forEach(r=>r.onclick=e=>{if(e.target.closest('a'))return;takeBranch(B[+r.dataset.i]);});
-  box.querySelectorAll('a[data-sv]').forEach(a=>a.onclick=()=>{pendingJunc=true;});
+  /* ---- aperçu d'un choix : on regarde avant de décider ---- */
+  if(preview!=null&&B[preview]){
+    const b=B[preview],c=CATS[b.cat],col=b.off?'#ef4444':c.color,gk=(prefs.gkey||'').trim(),pE=nodes.get(re.E);
+    const view=re.prev!=null?alongPt([pE,nodes.get(re.prev)],8):pE;
+    const w0=ways.get([...b.ways][0]);
+    box.innerHTML=`<div class="pv"><div class="pvh"><button class="btn small" id="pBack">‹</button><b>${b.off?'⛔':'Choix '+b.n} · ${esc(cap(b.dir)||'Départ')}</b><button class="btn small ghost" id="jX">✕</button></div>
+      <div><span class="tag" style="background:${col};${b.off?'color:#fff':''}">${esc(b.off?(b.cat==='no'?'Interdit':SHORT[b.cat]):SHORT[b.cat])}</span>${b.len?km(b.len):''}${b.off?'':(b.dead?' · cul-de-sac':' jusqu’au prochain carrefour')}</div>
+      <div class="meta">${b.name?esc(b.name)+' · ':''}${esc((w0&&w0.reason)||'')}${b.later&&b.later.length?' · puis '+b.later.map(k=>(SHORT[k]||k).toLowerCase()).join(', '):''}</div>
+      ${gk?`<iframe src="https://www.google.com/maps/embed/v1/streetview?key=${encodeURIComponent(gk)}&location=${view[0].toFixed(6)},${view[1].toFixed(6)}&heading=${b.head}&pitch=-5&fov=80" allowfullscreen loading="lazy"></iframe>`:`<div class="photo" id="pmx"></div><a class="sv" id="pSV" target="_blank" rel="noopener" href="${juncSV(re.E,re.prev,b)}"><svg class="ic"><use href="#i-cam"/></svg>Voir l’entrée dans Street View</a>`}
+      ${b.off?`<div class="q">Le panneau est-il bien là ?</div><div class="yn"><button class="btn" id="pKeep">Oui, interdit</button><button class="btn" style="background:#15803d;border-color:#15803d" id="pAllow">✓ Non, autorisé</button></div>`
+             :`<div class="q">Je prends ce chemin ?</div><div class="yn"><button class="btn" style="background:#15803d;border-color:#15803d" id="pYes">✓ Oui</button><button class="btn" id="pNo">✗ Non, autre choix</button></div><button class="btn small" style="width:100%;margin-top:8px;background:transparent;border-color:#b91c1c;color:#fca5a5" id="pBan">⛔ Il y a un panneau d’interdiction</button>`}
+      </div>`;
+    drawBranches(B,preview);
+    map.fitBounds(L.latLngBounds([pE].concat(b.cs.slice(0,40))).pad(0.35),{maxZoom:18,paddingBottomRight:isTouch?[0,260]:[420,0],paddingTopLeft:isTouch?[0,60]:[420,0]});
+    if(!gk)loadPanoramax(alongPt(b.cs,20),$('pmx'));
+    $('pBack').onclick=closePreview;$('jX').onclick=()=>{juncHidden=true;preview=null;renderJunction();};
+    if($('pSV'))$('pSV').onclick=()=>{pendingJunc=true;};
+    const mark=(st,txt)=>{for(const id of b.ways){notes[id]={s:st,n:txt,d:Date.now()};const w=ways.get(id);if(w){classifyWay(w);drawWay(w);}}LS.set('pq_notes',notes);refineAll();graphDirty=true;updateInfo();preview=null;renderJunction();};
+    if($('pYes'))$('pYes').onclick=()=>{preview=null;takeBranch(b);};
+    if($('pNo'))$('pNo').onclick=closePreview;
+    if($('pBan'))$('pBan').onclick=()=>{mark('no','Panneau vu à un carrefour');toast('Chemin noté interdit ⛔ : il ne sera plus proposé.',2500);};
+    if($('pKeep'))$('pKeep').onclick=closePreview;
+    if($('pAllow'))$('pAllow').onclick=()=>{mark('ok','Pas de panneau, vérifié');toast('Chemin noté autorisé ✓ : il est maintenant proposé.',2500);};
+    return;
+  }
+  preview=null;
+  const rows=B.map((b,i)=>{const c=CATS[b.cat];
+    return b.off?`<div class="jr off" data-i="${i}"><div class="num">⛔</div><div class="tx"><b>${branchTitle(b)}</b><span>${esc(b.reason||c.label)}</span></div><button class="btn small" style="padding:8px 10px">Voir</button></div>`
+      :`<div class="jr" data-i="${i}"><div class="num" style="background:${c.color}">${b.n}</div><div class="tx"><b>${branchTitle(b)}</b><span>${km(b.len)}${b.dead?' · cul-de-sac':' jusqu’au prochain carrefour'}${b.name?' · '+esc(b.name):''}${b.later.length?' · puis '+b.later.map(k=>(SHORT[k]||k).toLowerCase()).join(', '):''}</span></div><button class="btn small primary" style="padding:8px 10px">Voir</button></div>`;});
+  box.innerHTML=`<div class="jh"><b>${wps.length===1?'Départ':'Carrefour'} · où aller ?</b>${wps.length>1?'<button class="btn small" id="jUndo">↩</button><button class="btn small acc" id="jLoop">Boucler</button>':''}<button class="btn small ghost" id="jX">✕</button></div>
+    <div class="muted" style="margin:-2px 0 4px">Touche un choix pour le voir avant de décider.${isTouch?'':' (touches 1 à 9)'}</div>${rows.join('')||'<div class="muted">Aucun chemin praticable ici : touche un autre endroit de la carte.</div>'}`;
+  box.querySelectorAll('.jr[data-i]').forEach(r=>r.onclick=()=>openPreview(+r.dataset.i));
   $('jX').onclick=()=>{juncHidden=true;renderJunction();toast('Liste masquée : elle revient au prochain point posé.',2500);};
   if($('jUndo'))$('jUndo').onclick=()=>$('bUndo').onclick();
   if($('jLoop'))$('jLoop').onclick=()=>{$('loop').checked=true;computeRoute();toast('Retour au départ par le chemin le plus vert.',2500);};
-  // sur la carte : chaque choix en surbrillance, numéroté
-  B.forEach((b,i)=>{const c=CATS[b.cat];const cs=b.off?b.cs:b.cs.slice(0,Math.max(2,b.cs.length));
-    L.polyline(cs,{color:'#fff',weight:10,opacity:.55,interactive:false}).addTo(branchLayer);
-    L.polyline(cs,{color:b.off?'#ef4444':c.color,weight:5,dashArray:'1 9',lineCap:'round',interactive:false}).addTo(branchLayer);
-    const at=alongPt(b.cs,Math.min(60,(b.len||60)*0.5));
-    const m=L.marker(at,{zIndexOffset:900,icon:L.divIcon({className:'',html:`<div class="bm" style="background:${b.off?'#ef4444':c.color};color:${b.off?'#fff':'#0a1426'}">${b.off?'⛔':b.n}</div>`,iconSize:[24,24],iconAnchor:[12,12]})});
-    if(!b.off)m.on('click',e=>{L.DomEvent.stopPropagation(e);takeBranch(b);});m.addTo(branchLayer);});
+  drawBranches(B,null);
+  renderTimeline();
 }
+/* ---------- Suivi du tracé en cours (étapes) ---------- */
+function renderTimeline(){
+  const box=$('timeline');if(!box)return;
+  $('startCard').style.display=wps.length?'none':'';
+  const r=lastRoute;if(!r||!r.lp||!r.lp.length){box.innerHTML='';return;}
+  const P=routePts();let rows='',acc=0,prevB=null;
+  r.lp.forEach((p,i)=>{
+    if(!p||p.length<2){rows+=`<div class="row"><div class="dot" style="background:#ef4444;color:#fff">${i+1}</div><div class="tx"><b>Étape ${i+1} : pas de passage</b><span>Déplace ou supprime le point ${i+2}</span></div></div>`;return;}
+    const by={};let d=0;for(let k=0;k<p.length-1;k++){const e=edgeOf(p[k],p[k+1]);if(!e)continue;const c=ways.get(e[3]).cat;by[c]=(by[c]||0)+e[2];d+=e[2];}
+    const main=Object.keys(by).sort((a,b)=>by[b]-by[a])[0]||'road',cs=p.map(n=>nodes.get(n)),h=brg(cs[0],alongPt(cs,25));
+    const dir=prevB==null?'Départ':cap(relDir(prevB,h));prevB=brg(alongPt(cs.slice().reverse(),25),cs[cs.length-1]);
+    const gp=d?Math.round(Object.keys(by).filter(k=>GREEN_CATS.has(k)).reduce((s,k)=>s+by[k],0)/d*100):0;
+    const view=i>0&&r.lp[i-1]?alongPt(r.lp[i-1].slice(-6).map(n=>nodes.get(n)).reverse(),8):cs[0];
+    const sv=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${view[0].toFixed(6)},${view[1].toFixed(6)}&heading=${Math.round(brg(view,alongPt(cs,25)))}&pitch=-5&fov=80`;
+    const closing=$('loop').checked&&i===r.lp.length-1;
+    rows+=`<div class="row" data-i="${i}"><div class="dot" style="background:${CATS[main].color}">${i+1}</div><div class="tx"><b>${closing?'Retour au départ':dir} · ${esc(SHORT[main]||'')}</b><span>${km(d)} · ${gp} % vert · km ${(acc/1000).toFixed(1).replace('.',',')}</span></div>
+      <div class="acts"><a href="${sv}" target="_blank" rel="noopener" title="Street View au début de l’étape"><svg class="ic"><use href="#i-cam"/></svg></a><button data-a="see" title="Voir sur la carte"><svg class="ic"><use href="#i-eye"/></svg></button>${closing?'':`<button data-a="cut" title="Couper le tracé ici (garder les étapes avant)">✂</button>`}</div></div>`;
+    acc+=d;
+  });
+  box.innerHTML=`<div class="tl"><div class="head"><span>Tracé en cours · ${r.lp.length} étape(s)</span><span>${km(acc)}</span></div>${rows}</div>`;
+  box.querySelectorAll('.row[data-i]').forEach(row=>{const i=+row.dataset.i,p=r.lp[i];
+    const see=row.querySelector('[data-a=see]');if(see)see.onclick=()=>{hlLayer.clearLayers();const cs=p.map(n=>nodes.get(n));L.polyline(cs,{color:'#22d3ee',weight:6,dashArray:'2 9',interactive:false}).addTo(hlLayer);map.fitBounds(L.latLngBounds(cs).pad(0.25));if(isTouch)collapse(true);};
+    const cut=row.querySelector('[data-a=cut]');if(cut)confirmCut(cut,()=>{wps=wps.slice(0,i+1);$('loop').checked=false;drawWps();computeRoute();toast('Tracé coupé : tu repars de la fin de l’étape '+i+'.',2500);});});
+}
+function confirmCut(b,fn){b.onclick=()=>{if(b.dataset.c){fn();}else{b.dataset.c=1;b.textContent='✓?';b.style.background='#b91c1c';setTimeout(()=>{if(b.isConnected){delete b.dataset.c;b.textContent='✂';b.style.background='';}},3000);}};}
 let pendingJunc=false;
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&pendingJunc){pendingJunc=false;juncHidden=false;setTimeout(renderJunction,200);}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&pendingJunc){pendingJunc=false;juncHidden=false;setTimeout(()=>{renderJunction();if(preview!=null)toast('Alors, tu prends ce chemin ?',2500);},200);}});
 
 /* ---------- Itinéraire courant ---------- */
 let mode='explore',wps=[],lastRoute=null,routeTimer=null;
@@ -1270,7 +1364,7 @@ function seedLegs(lp){legCache.clear();const P=routePts();if(!lp)return;for(let 
 let patchedN=0;
 function computeRoute(){
   routeLayer.clearLayers();entryLayer.clearLayers();hlLayer.clearLayers();lastRoute=null;$('roadbook').style.display='none';
-  if(wps.length<2){showStats();saveDraft();juncHidden=false;renderJunction();return;}
+  if(wps.length<2){showStats();saveDraft();juncHidden=false;preview=null;renderJunction();renderTimeline();return;}
   if(!ways.size){showStats('Les chemins ne sont pas encore chargés pour cette zone.');L.polyline(wps,{color:'#ff7a1a',weight:3,dashArray:'6 8'}).addTo(routeLayer);return;}
   if(graphDirty||!adj)buildGraph();
   const P=routePts(),keys=[];for(let i=0;i<P.length-1;i++)keys.push(wkey(P[i])+'>'+wkey(P[i+1]));
@@ -1299,7 +1393,7 @@ function computeRoute(){
     const cum=[0];for(let i=1;i<r.coords.length;i++)cum.push(cum[i-1]+hav(r.coords[i-1],r.coords[i]));r.cum=cum;
   }
   lastRoute=r;showStats();drawEntries();renderRoadbook();saveDraft();clearTimeout(histT);histT=setTimeout(histUpsert,1200);
-  juncHidden=false;renderJunction();
+  juncHidden=false;preview=null;renderJunction();renderTimeline();
 }
 function showStats(msg){
   const box=$('stats');
@@ -1724,7 +1818,7 @@ $('bWipe').onclick=async()=>{
 /* ====================================================================
    INTERFACE
    ==================================================================== */
-function setMode(m){mode=m;$('mExplore').classList.toggle('on',m==='explore');$('mTrace').classList.toggle('on',m==='trace');map.getContainer().classList.toggle('trace',m==='trace');map.closePopup();if(m==='trace'&&isTouch)collapse(true);renderJunction();
+function setMode(m){mode=m;$('mExplore').classList.toggle('on',m==='explore');$('mTrace').classList.toggle('on',m==='trace');map.getContainer().classList.toggle('trace',m==='trace');map.closePopup();if(m==='trace'&&isTouch)collapse(true);if(m==='trace'&&!isTouch)showPane('pRoute');renderJunction();
   if(m==='trace')toast(ways.size?'Touche la carte pour poser des points.':'Pose tes points : les chemins se chargent dès que tu es assez zoomé.');}
 $('mExplore').onclick=()=>setMode('explore');$('mTrace').onclick=()=>setMode('trace');
 function collapse(c){const p=$('panel');p.classList.toggle('collapsed',c);p.classList.remove('full');document.body.classList.toggle('pOpen',!c);setTimeout(()=>map.invalidateSize(),250);}
@@ -1806,7 +1900,7 @@ $('bLayers').onclick=()=>showPane('pLayers');
 const TOUR=[
   ['i-route','Bienvenue sur Pistes Quad','Un maximum de chemins autorisés aux quads et SSV autour de Fourmies, vérifiés avec OpenStreetMap et le cadastre. 5 écrans, 30 secondes.'],
   ['i-key','Lis les couleurs','<b style="color:#22d3ee">Cyan</b> vérifié par toi · <b style="color:#16a34a">vert</b> ouvert ou chemin rural au cadastre · <b style="color:#a3e635">vert clair</b> à vérifier · <b style="color:#facc15">jaune</b> agricole · <b style="color:#c084fc">violet</b> forêt ONF · <b style="color:#d97706">orange pointillé</b> bois non prouvé · <b style="color:#fb7185">rose</b> privé probable · <b style="color:#ef4444">rouge</b> interdit.'],
-  ['i-pencil','Trace carrefour par carrefour','Passe en <b style="color:#ff7a1a">Tracer</b> et touche la carte pour ton départ. À chaque carrefour, l’appli liste les chemins possibles avec un 📷 Street View tourné vers chacun : touche ton choix, et ainsi de suite. <b>Boucler</b> te ramène au départ.'],
+  ['i-pencil','Trace carrefour par carrefour','Passe en <b style="color:#ff7a1a">Tracer</b> et touche la carte pour ton départ. À chaque carrefour, touche un choix pour le <b>voir</b> (photo, 📷 Street View tourné vers le chemin), puis réponds <b style="color:#22c55e">✓ Oui</b> ou <b>✗ Non</b>. <b>Boucler</b> te ramène au départ.'],
   ['i-cam','Contrôle chaque virage','Un point 📷 à chaque virage et entrée de chemin. <b>Contrôler les virages</b> : Street View s’ouvre face au chemin, réponds <b style="color:#22c55e">✓ OK</b> ou <b style="color:#ef4444">⛔ Interdit</b> : l’interdit est contourné au plus près, le reste ne bouge pas.'],
   ['i-ride','Retrouve et roule','Chaque itinéraire est gardé tout seul : aperçus en haut de <b>Tracé</b>, liste dans <b>Tracés</b>, ⭐ pour tes favoris. <b>Balade</b> pour le GPS, <b>GPX</b> pour OsmAnd ou CarPlay.<br><br><b>Le panneau sur place fait toujours foi.</b> Guide complet : Aide → Guide PDF.']];
 let tourI=0;
@@ -1814,7 +1908,7 @@ function tour(i){tourI=i;const w=$('welcome');w.style.display='flex';const t=TOU
   $('wIc').innerHTML=`<use href="#${t[0]}"/>`;$('wT').textContent=t[1];$('wP').innerHTML=t[2];
   w.querySelectorAll('.dots i').forEach((d,k)=>d.classList.toggle('on',k===i));
   $('wNext').textContent=i<TOUR.length-1?'Suivant':'C’est parti !';}
-function endTour(){$('welcome').style.display='none';LS.set('pq_seen9',true);}
+function endTour(){$('welcome').style.display='none';LS.set('pq_seen10',true);}
 $('wNext').onclick=()=>tourI<TOUR.length-1?tour(tourI+1):endTour();
 $('wSkip').onclick=endTour;
 $('bTour').onclick=()=>tour(0);
@@ -1824,6 +1918,9 @@ document.addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea')){if(e.key==='Escape'){e.target.blur();$('searchBox').style.display='none';}return;}
   if(e.ctrlKey||e.metaKey||e.altKey)return;
   const k=e.key.toLowerCase();
+  if(mode==='trace'&&/^[1-9]$/.test(k)){const b=juncBranches.findIndex(x=>!x.off&&x.n===+k);if(b>=0){openPreview(b);return;}}
+  if(mode==='trace'&&preview!=null&&k==='enter'){const y=$('pYes');if(y)y.click();return;}
+  if(mode==='trace'&&preview!=null&&k==='escape'){closePreview();return;}
   if(k==='e')setMode('explore');else if(k==='t')setMode('trace');
   else if(k==='z'||k==='backspace'){e.preventDefault();$('bUndo').onclick();}
   else if(k==='f'){e.preventDefault();$('searchBox').style.display='block';$('q').focus();}
@@ -1847,7 +1944,7 @@ document.addEventListener('keydown',e=>{
   const r=LS.get('pq_ride',null);
   if(r&&r.pts&&r.pts.length&&Date.now()-r.t0<12*3600e3){toast('Balade en cours récupérée.',3000);startRide(r);showPane('pRide');}
   autoLoad();
-  if(!LS.get('pq_seen9',false))setTimeout(()=>tour(0),500);
+  if(!LS.get('pq_seen10',false))setTimeout(()=>tour(0),500);
   if('serviceWorker'in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{});
   if(location.protocol==='file:')setTimeout(()=>toast('Ouvert depuis un fichier : tout marche sauf le hors-ligne et parfois le GPS. Mets-le en ligne pour en profiter à 100 %.',6000),7000);
 })();
