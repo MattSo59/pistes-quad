@@ -6,8 +6,15 @@
 - Appli web (PWA) pour créer des itinéraires quad / SSV sur chemins autorisés autour de Fourmies (Sud-Avesnois).
 - En ligne : https://mattso59.github.io/pistes-quad/ (installable sur iPhone, Android, PC).
 - Code : dépôt GitHub public `MattSo59/pistes-quad` (branche `main`). Toute modification poussée est publiée automatiquement (GitHub Actions → GitHub Pages, ~4 min).
-- Version actuelle : v10 (affichée en bas de l'onglet Aide).
+- Version actuelle : v11 (affichée en bas de l'onglet Aide).
 - Règle convenue : **mettre à jour le guide PDF et la présentation de démarrage à chaque changement, sans demander.**
+
+## Accès privé et comptes (en cours de mise en place)
+- Cible : Cloudflare Pages (projet `pistes-quad`, branche `publication` générée par GitHub Actions à chaque push et chaque mois) sur `quad.team-somatcha.fr`, protégé par Cloudflare Access (équipe Zero Trust « somatcha », code par e-mail).
+- Utilisateurs = e-mails autorisés dans la règle Access de l'application « Pistes Quad » (aujourd'hui : djprofusion@me.com).
+- Données par utilisateur : Pages Function `site/functions/api/data.js` + KV (`DATA` → `pistes-quad-donnees`), clé `user:<email>`. Jeton Access vérifié (variables `TEAM_DOMAIN`, `POLICY_AUD`).
+- L'appli synchronise historique, favoris, notes de chemins, sorties GPS, points vus (fusion par date, suppressions respectées). Sans serveur (ancienne adresse github.io) : mode local.
+- Ensuite : passer le dépôt GitHub en privé (GitHub Pages s'arrête alors).
 
 ## Organisation du dépôt
 - `site/index.html` : toute l'appli (HTML + CSS + JS, Leaflet 1.9.4 via unpkg).
