@@ -6,7 +6,7 @@
 - Appli web (PWA) pour créer des itinéraires quad / SSV sur chemins autorisés autour de Fourmies (Sud-Avesnois).
 - En ligne : https://mattso59.github.io/pistes-quad/ et https://quad.team-somatcha.fr/ (installables sur iPhone, Android, PC). Connexion avec un compte validé par l'admin.
 - Code : dépôt GitHub public `MattSo59/pistes-quad` (branche `main`). Toute modification poussée est publiée automatiquement (GitHub Actions → branche `publication` → Worker Cloudflare, ~5 min).
-- Version actuelle : v16 (aucun numéro sur la carte, 📷 = contrôle Street View ; tracé manuel uniquement ; points intermédiaires sans numéro, D et 🏁 seuls ; bouton ✓ direct, « ↩ Annuler », « 🏁 Terminer ici » → GPX CarPlay/OsmAnd, favori, lien) (affichée en bas de l'onglet Aide).
+- Version actuelle : v17 (contrôles automatiques retirés, contrôle à la volée en touchant le tracé, drapeau au vrai bout, pas de grand détour pour éviter un chemin déjà pris ; aucun numéro sur la carte, 📷 = contrôle Street View ; tracé manuel uniquement ; points intermédiaires sans numéro, D et 🏁 seuls ; bouton ✓ direct, « ↩ Annuler », « 🏁 Terminer ici » → GPX CarPlay/OsmAnd, favori, lien) (affichée en bas de l'onglet Aide).
 - Règle convenue : **mettre à jour le guide PDF et la présentation de démarrage à chaque changement, sans demander.**
 
 ## Hébergement et comptes (v13, 9/11/2026)

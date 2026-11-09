@@ -186,6 +186,7 @@ table.tags{border-collapse:collapse;margin-top:6px}table.tags td{padding:1px 8px
 .wp span{transform:rotate(45deg);font-weight:800;font-size:14px}
 .wp.s{background:var(--blue)}
 .wp.a{background:#16a34a}
+#roadbook{display:none!important}
 .wpd{width:14px;height:14px;border-radius:50%;background:var(--orange);border:3px solid #fff;box-shadow:0 2px 5px #0009}
 .jr .go{background:#16a34a;color:#fff;border-color:#16a34a;font-weight:800;padding:8px 12px}
 #junc .jh .undo{background:#fff;color:#0a1426;font-weight:800}
@@ -554,7 +555,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v16</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v17</div>
   </div>
 
   </div>
@@ -1132,8 +1133,10 @@ const checks=()=>lastRoute&&lastRoute.ck?lastRoute.ck:[];
 function ckOk(c){if(seenPts[ckKey(c)])return true;const tw=[...c.ways].filter(w=>TRAIL_CATS.has((ways.get(w)||{}).cat));return tw.length>0&&tw.every(w=>notes[w]&&notes[w].s==='ok');}
 function svURL(c){return`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${c.view[0].toFixed(6)},${c.view[1].toFixed(6)}&heading=${c.head}&pitch=-5&fov=80`;}
 function ckTitle(c){return c.enter?`Entrée de chemin (${c.side})`:`Virage ${c.side}`;}
+const SHOW_AUTO_CHECKS=false;
 function drawEntries(){
   entryLayer.clearLayers();
+  if(!SHOW_AUTO_CHECKS)return;
   checks().forEach((c,i)=>{const ok=ckOk(c);
     L.marker(c.at,{zIndexOffset:500,icon:L.divIcon({className:'',html:`<div class="ent${ok?' ok':''}" style="--c:${CATS[c.cat].color}" title="Point à vérifier dans Street View">${ok?'✓':'📷'}</div>`,iconSize:[24,24],iconAnchor:[12,12]})})
       .on('click',e=>{L.DomEvent.stopPropagation(e);openCheck(i);}).addTo(entryLayer);});
@@ -1408,6 +1411,7 @@ function patchPath(p,wpA,wpB,used){
   }
   return pathOK(out)?out:null;
 }
+function pathLen(p){let d=0;for(let k=0;k<p.length-1;k++)d+=hav(nodes.get(p[k]),nodes.get(p[k+1]));return d;}
 function assemble(LP,P){
   const coords=[],legs=[],byCat={},steps=[];let dist=0,gatesN=0;const fails=[];
   LP.forEach((p,i)=>{
@@ -1440,7 +1444,10 @@ function computeRoute(){
   // 2) étapes nouvelles (point ajouté, déplacé ou supprimé) : calculées en évitant le reste du tracé
   keys.forEach((k,i)=>{if(LP[i])return;
     const a=nearestNode(ll2a(P[i])),b=nearestNode(ll2a(P[i+1]));
-    const r=(a!=null&&b!=null)?astar(a,b,$('noReuse').checked?used:null,2):null;
+    let r=(a!=null&&b!=null)?astar(a,b,$('noReuse').checked?used:null,2):null;
+    // pas de grand détour juste pour éviter un chemin déjà emprunté : on va au plus court
+    if(a!=null&&b!=null&&$('noReuse').checked){const d=astar(a,b,null,2);
+      if(d&&(!r||pathLen(r.path)>pathLen(d.path)*1.5+200))r=d;}
     if(r){LP[i]=r.path;addUsed(r.path);}});
   legCache.clear();keys.forEach((k,i)=>{if(LP[i])legCache.set(k,LP[i]);});
   patchedN=patched;
@@ -1449,11 +1456,12 @@ function computeRoute(){
   r.tr=buildTroncons(r.steps);r.ck=buildChecks(r.steps);
   if(r.coords.length>1){
     L.polyline(r.coords,{color:'#fff',weight:12,opacity:.95,interactive:false}).addTo(routeLayer);
+    L.polyline(r.coords,{color:'#000',weight:26,opacity:0.001}).on('click',e=>{L.DomEvent.stopPropagation(e);routeCheckAt(e.latlng);}).addTo(routeLayer);
     L.polyline(r.coords,{color:'#ff7a1a',weight:8.5,interactive:false}).addTo(routeLayer);
     for(const t of r.tr)L.polyline(t.coords,{color:CATS[t.cat].color,weight:3.5,interactive:false}).addTo(routeLayer);
     const cum=[0];for(let i=1;i<r.coords.length;i++)cum.push(cum[i-1]+hav(r.coords[i-1],r.coords[i]));r.cum=cum;
   }
-  lastRoute=r;showStats();drawEntries();renderRoadbook();saveDraft();clearTimeout(histT);histT=setTimeout(histUpsert,1200);
+  lastRoute=r;placeFlag();showStats();drawEntries();renderRoadbook();saveDraft();clearTimeout(histT);histT=setTimeout(histUpsert,1200);
   juncHidden=false;preview=null;renderJunction();renderTimeline();
 }
 function showStats(msg){
@@ -1483,11 +1491,25 @@ function addWp(ll){
   }
   wps.push(ll);drawWps();scheduleRoute();try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}
 }
+/* Contrôle à la volée : toucher le tracé → Street View tourné dans le sens de la marche */
+function routeCheckAt(ll){
+  const r=lastRoute;if(!r)return;const q=ll2a(ll);let k=0,bd=1e18;
+  for(let i=0;i<r.coords.length;i++){const d=hav(q,r.coords[i]);if(d<bd){bd=d;k=i;}}
+  const a=r.coords[Math.max(0,Math.min(k,r.coords.length-2))],b=r.coords[Math.max(1,Math.min(k+1,r.coords.length-1))];
+  const p=r.coords[k],h=Math.round(brg(a,b)),hb=(h+180)%360;
+  const sv=hd=>`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${p[0].toFixed(6)},${p[1].toFixed(6)}&heading=${hd}&pitch=-5&fov=80`;
+  const node=el(`<b>Contrôle ici</b><div class="links"><a target="_blank" rel="noopener" href="${sv(h)}" data-sv>📷 Street View · sens du tracé</a><a target="_blank" rel="noopener" href="${sv(hb)}" data-sv>📷 Street View · regarder derrière</a><a target="_blank" rel="noopener" href="https://api.panoramax.xyz/#focus=map&map=18/${p[0].toFixed(6)}/${p[1].toFixed(6)}">Panoramax</a><a target="_blank" rel="noopener" href="https://www.geoportail.gouv.fr/carte?c=${p[1].toFixed(6)},${p[0].toFixed(6)}&z=18&l0=ORTHOIMAGERY.ORTHOPHOTOS::GEOPORTAIL:OGC:WMTS(1)&permalink=yes">Photo aérienne</a></div>`);
+  L.popup().setLatLng(p).setContent(node).openOn(map);
+}
+let flagM=null;
+function placeFlag(){if(flagM){flagM.remove();flagM=null;}
+  const r=lastRoute;if(!r||r.coords.length<2||wps.length<2)return;
+  flagM=L.marker(r.coords[r.coords.length-1],{interactive:false,zIndexOffset:800,icon:L.divIcon({className:'',html:'<div class="wp a"><span>🏁</span></div>',iconSize:[32,32],iconAnchor:[16,36]})}).addTo(wpLayer);}
 function drawWps(){
   wpLayer.clearLayers();
   wps.forEach((p,i)=>{
-    const last=i===wps.length-1&&i>0,big=i===0||last;
-    const m=L.marker(p,{draggable:true,autoPan:true,zIndexOffset:big?700:0,icon:big?L.divIcon({className:'',html:`<div class="wp${i===0?' s':' a'}"><span>${i===0?'D':'🏁'}</span></div>`,iconSize:[32,32],iconAnchor:[16,36]}):L.divIcon({className:'',html:'<div class="wpd"></div>',iconSize:[14,14],iconAnchor:[7,7]})});
+    const big=i===0;
+    const m=L.marker(p,{draggable:true,autoPan:true,zIndexOffset:big?700:0,icon:big?L.divIcon({className:'',html:'<div class="wp s"><span>D</span></div>',iconSize:[32,32],iconAnchor:[16,36]}):L.divIcon({className:'',html:'<div class="wpd"></div>',iconSize:[14,14],iconAnchor:[7,7]})});
     m.on('dragend',()=>{wps[i]=m.getLatLng();scheduleRoute();});
     m.on('click',ev=>{L.DomEvent.stopPropagation(ev);
       const node=el(`<b>${i===0?'Départ':(i===wps.length-1?'Arrivée (dernier choix)':'Choix n° '+i)}</b><div class="links"><button class="r" data-a="del">Supprimer ce point</button>${i>0?'<button data-a="start">En faire le départ</button>':''}</div>${linksHTML(p.lat,p.lng)}`);
