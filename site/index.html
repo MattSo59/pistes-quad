@@ -372,9 +372,9 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
     <div id="histStrip"></div>
     <section class="card hero" id="startCard">
       <div class="hero-t"><div class="badge"><svg class="ic"><use href="#i-pencil"/></svg></div><div><b>Construire mon itinéraire</b><span>Carrefour par carrefour, avec Street View tourné vers chaque chemin.</span></div></div>
-      <div class="muted" style="color:#cfe0ff">1. Passe en <b>Tracer</b> et touche la carte pour placer ton départ.<br>2. Choisis un chemin dans la liste en bas de la carte, et ainsi de suite.<br>3. <b>Boucler</b> te ramène au départ par le plus vert.</div>
+      <div class="muted" style="color:#cfe0ff">1. Passe en <b>Tracer</b> et touche la carte pour placer ton départ.<br>2. Choisis un chemin dans la liste en bas de la carte, et ainsi de suite.<br>3. Continue jusqu’à ton arrivée, carrefour par carrefour.</div>
       <div class="row2" style="margin-top:12px"><button class="btn acc wide" id="bStart"><svg class="ic"><use href="#i-pencil"/></svg>Commencer un tracé</button></div>
-      <div style="display:none"><div id="kmChips"></div><input type="range" id="loopKm" value="30"><output id="loopKmV"></output><button id="bGen"></button><button id="bGen2"></button></div>
+      
     </section>
 
     <section class="card">
@@ -406,7 +406,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
 
     <details class="card">
       <summary>Réglages du tracé</summary>
-      <label class="row"><input type="checkbox" id="loop"> Boucle (retour au départ)</label>
+      <input type="checkbox" id="loop" hidden>
       <label class="row"><input type="checkbox" id="noReuse" checked> Éviter les allers-retours</label>
       <div class="muted" style="margin-bottom:4px">Le tracé peut emprunter :</div>
       <div id="routeCats"></div>
@@ -516,7 +516,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="card-h"><svg class="ic"><use href="#i-info"/></svg>Démarrage rapide</div>
       <div class="muted">
       1. Déplace la carte sur ta zone : les chemins se colorent tout seuls.<br>
-      2. <b>Tracé → Générer ma boucle</b>, ou passe en <b>Tracer</b> et pose tes points.<br>
+      2. Passe en <b>Tracer</b> et construis ton itinéraire carrefour par carrefour.<br>
       3. En <b>Explorer</b>, touche un chemin : statut, photos (Street View, Panoramax…), et note-le « vérifié » ou « interdit ».<br>
       4. <b>Balade</b> le jour J : GPS, suivi, alerte hors tracé, enregistrement.<br>
       <span class="mob-only"><b>Installer :</b> Safari → Partager → « Sur l'écran d'accueil ».</span>
@@ -548,7 +548,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v13</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v14</div>
   </div>
 
   </div>
@@ -602,7 +602,7 @@ const DB={db:null,
 const prefs=LS.get('pq_prefs',{});
 for(const k in CATS){if(prefs['r_'+k]!==undefined&&!CATS[k].locked)CATS[k].route=prefs['r_'+k];if(prefs['s_'+k]!==undefined)CATS[k].show=prefs['s_'+k];}
 let notes=LS.get('pq_notes',{});   // wayId -> {s:'ok'|'no', n:texte, d:date}
-function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,loopKm:$('loopKm').value,noReuse:$('noReuse').checked,server:prefs.server||'',gkey:prefs.gkey||''};
+function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,noReuse:$('noReuse').checked,server:prefs.server||'',gkey:prefs.gkey||''};
   for(const k in CATS){p['r_'+k]=CATS[k].route;p['s_'+k]=CATS[k].show;}LS.set('pq_prefs',p);}
 
 /* ====================================================================
@@ -1311,12 +1311,11 @@ function renderJunction(){
   const rows=B.map((b,i)=>{const c=CATS[b.cat];
     return b.off?`<div class="jr off" data-i="${i}"><div class="num">⛔</div><div class="tx"><b>${branchTitle(b)}</b><span>${esc(b.reason||c.label)}</span></div><button class="btn small" style="padding:8px 10px">Voir</button></div>`
       :`<div class="jr" data-i="${i}"><div class="num" style="background:${c.color}">${b.n}</div><div class="tx"><b>${branchTitle(b)}</b><span>${km(b.len)}${b.dead?' · cul-de-sac':' jusqu’au prochain carrefour'}${b.name?' · '+esc(b.name):''}${b.later.length?' · puis '+b.later.map(k=>(SHORT[k]||k).toLowerCase()).join(', '):''}</span></div><button class="btn small primary" style="padding:8px 10px">Voir</button></div>`;});
-  box.innerHTML=`<div class="jh"><b>${wps.length===1?'Départ':'Carrefour'} · où aller ?</b>${wps.length>1?'<button class="btn small" id="jUndo">↩</button><button class="btn small acc" id="jLoop">Boucler</button>':''}<button class="btn small ghost" id="jX">✕</button></div>
+  box.innerHTML=`<div class="jh"><b>${wps.length===1?'Départ':'Carrefour'} · où aller ?</b>${wps.length>1?'<button class="btn small" id="jUndo">↩</button>':''}<button class="btn small ghost" id="jX">✕</button></div>
     <div class="muted" style="margin:-2px 0 4px">Touche un choix pour le voir avant de décider.${isTouch?'':' (touches 1 à 9)'}</div>${rows.join('')||'<div class="muted">Aucun chemin praticable ici : touche un autre endroit de la carte.</div>'}`;
   box.querySelectorAll('.jr[data-i]').forEach(r=>r.onclick=()=>openPreview(+r.dataset.i));
   $('jX').onclick=()=>{juncHidden=true;renderJunction();toast('Liste masquée : elle revient au prochain point posé.',2500);};
   if($('jUndo'))$('jUndo').onclick=()=>$('bUndo').onclick();
-  if($('jLoop'))$('jLoop').onclick=()=>{$('loop').checked=true;computeRoute();toast('Retour au départ par le chemin le plus vert.',2500);};
   drawBranches(B,null);
   renderTimeline();
 }
@@ -1433,7 +1432,7 @@ function computeRoute(){
 function showStats(msg){
   const box=$('stats');
   if(msg){box.innerHTML=`<div class="empty"><svg class="ic"><use href="#i-info"/></svg><span>${esc(msg)}</span></div>`;return;}
-  if(!lastRoute){box.innerHTML=`<div class="empty"><svg class="ic"><use href="#i-route"/></svg><span>${wps.length?'Encore un point et le tracé apparaît.':'Pas encore d’itinéraire. Génère une boucle ou passe en <b>Tracer</b>.'}</span></div>`;return;}
+  if(!lastRoute){box.innerHTML=`<div class="empty"><svg class="ic"><use href="#i-route"/></svg><span>${wps.length?'Encore un point et le tracé apparaît.':'Pas encore d’itinéraire. Passe en <b>Tracer</b> et touche la carte.'}</span></div>`;return;}
   const r=lastRoute,road=r.byCat.road||0,h=r.trail/1000/15+road/1000/40,pct=r.dist?Math.round(r.trail/r.dist*100):0;
   const ks=Object.keys(CATS).filter(k=>r.byCat[k]);
   let s=`<div class="kpis"><div><span>Distance</span><b>${km(r.dist)}</b></div><div><span>Durée est.</span><b>${dur(h)}</b></div><div class="hl"><span>Chemins verts</span><b>${r.dist?Math.round(r.green/r.dist*100):0} %</b></div></div>
@@ -1471,60 +1470,13 @@ function drawWps(){
   });
 }
 $('bUndo').onclick=()=>{wps.pop();drawWps();scheduleRoute();};
-$('bClear').onclick=()=>{legCache.clear();curId=null;LS.set('pq_cur',null);renderHist();wps=[];drawWps();scheduleRoute();$('profile').innerHTML='';$('bGen2').disabled=true;};
+$('bClear').onclick=()=>{legCache.clear();curId=null;LS.set('pq_cur',null);renderHist();wps=[];drawWps();scheduleRoute();$('profile').innerHTML='';};
 $('bRev').onclick=()=>{wps.reverse();drawWps();scheduleRoute();};
 $('loop').onchange=scheduleRoute;
 $('noReuse').onchange=()=>{savePrefs();scheduleRoute();};
 $('pref').oninput=()=>{graphDirty=true;legCache.clear();savePrefs();scheduleRoute();};
 
-/* ====================================================================
-   BOUCLE AUTOMATIQUE
-   ==================================================================== */
-let genSeed=Math.random()*360,genStart=null;
-$('loopKm').oninput=()=>{$('loopKmV').textContent=$('loopKm').value+' km';savePrefs();};
-async function genLoop(again){
-  const target=+$('loopKm').value*1000;
-  if(!again||!genStart)genStart=wps[0]?ll2a(wps[0]):(meLL?meLL.slice():ll2a(map.getCenter()));
-  if(again)genSeed+=97;else genSeed=Math.random()*360;
-  const start=genStart,R=target/(2*Math.PI);
-  $('bGen').disabled=$('bGen2').disabled=true;
-  const span=1.7*R+800;
-  const b=L.latLngBounds(dest(start,180,span),dest(start,0,span)).extend(dest(start,90,span)).extend(dest(start,270,span));
-  const ks=tilesIn(b);
-  if(ks.length>25){toast('Boucle trop grande pour cette zone.');$('bGen').disabled=false;return;}
-  if(ks.some(k=>!loadedTiles.has(k)))toast('Chargement des chemins autour du départ… (rapide la prochaine fois)',4000);
-  const okLoad=await ensureTiles(ks,false,'Boucle : chemins');
-  if(!okLoad&&!ks.some(k=>loadedTiles.has(k))){chip(null);$('bGen').disabled=false;return;}
-  chip('Recherche de la meilleure boucle…');
-  await new Promise(r=>setTimeout(r,30));
-  if(graphDirty||!adj)buildGraph();
-  if(nearestNode(start,1500)===null){chip(null);toast('Aucun chemin autorisé près du point de départ.');$('bGen').disabled=false;return;}
-  let best=null,f=0.8,tries=0;const t0=performance.now();
-  for(let k=0;k<45&&performance.now()-t0<9000;k++){
-    const nPts=3+(k%3),th=genSeed+k*137.5,Rk=R*f*(0.88+0.24*Math.random()),C=dest(start,th,Rk);
-    const pts=[start];for(let j=1;j<=nPts;j++)pts.push(dest(C,th+180+j*360/(nPts+1),Rk*(0.85+0.3*Math.random())));
-    const r=routeThrough(pts,true,{snapR:1300,noReuse:true,green:true,roadMul:3});
-    tries++;
-    if(r.fails.length||r.dist<500)continue;
-    const bad=((r.byCat.agri||0)+(r.byCat.dom||0)+(r.byCat.restr||0))/r.dist;
-    const score=2.6*r.green/r.dist-1.3*Math.abs(r.dist-target)/target-1.2*bad;
-    if(!best||score>best.score)best={score,r,n:nPts};
-    f=Math.max(0.3,Math.min(1.7,f*Math.pow(target/r.dist,0.7)));
-    if(k%2===1){chip(`Recherche de la boucle la plus verte… ${tries} essais`);await new Promise(r=>setTimeout(r,0));}
-  }
-  chip(null);$('bGen').disabled=false;
-  if(!best){toast('Pas de boucle trouvée : réseau trop coupé ici. Essaie une autre distance ou un autre départ.',5000);return;}
-  curId=null;
-  wps=best.r.sn.slice(0,best.n+1).map(id=>L.latLng(nodes.get(id)));
-  $('loop').checked=true;seedLegs(best.r.lp);drawWps();computeRoute();
-  $('bGen2').disabled=false;
-  if(lastRoute&&lastRoute.coords.length)map.fitBounds(L.latLngBounds(lastRoute.coords).pad(0.08),{paddingBottomRight:isTouch?[0,0]:[400,0]});
-  toast(`Boucle de ${km(lastRoute.dist)}, ${Math.round(lastRoute.green/lastRoute.dist*100)} % de chemins verts, ${checks().length} points Street View à contrôler.`,6000);
-}
-$('bStart').onclick=()=>{newRoute();if(isTouch)collapse(true);};
-$('bCheck').onclick=()=>{if(isTouch)collapse(true);const C=checks();const i=C.findIndex(c=>!ckOk(c));openCheck(i<0?0:i);};
-$('bGen').onclick=()=>genLoop(false);
-$('bGen2').onclick=()=>genLoop(true);
+
 
 /* ====================================================================
    GPS / BALADE
@@ -2058,9 +2010,7 @@ $('bDiag').onclick=async()=>{
 };
 
 /* ---- nouveaux contrôles : distances rapides, légende, fonds, poignée, présentation ---- */
-function syncChips(){document.querySelectorAll('#kmChips button').forEach(b=>b.classList.toggle('on',b.dataset.km===$('loopKm').value));}
-document.querySelectorAll('#kmChips button').forEach(b=>b.onclick=()=>{$('loopKm').value=b.dataset.km;$('loopKm').oninput();});
-$('loopKm').addEventListener('input',syncChips);
+
 $('bLegend').onclick=()=>{const l=$('mapLegend'),on=l.style.display!=='block';l.style.display=on?'block':'none';$('bLegend').classList.toggle('on',on);};
 $('mapLegend').onclick=()=>$('bLegend').onclick();
 $('bLayers').onclick=()=>showPane('pLayers');
@@ -2075,7 +2025,7 @@ $('bLayers').onclick=()=>showPane('pLayers');
 const TOUR=[
   ['i-route','Bienvenue sur Pistes Quad','Un maximum de chemins autorisés aux quads et SSV autour de Fourmies, vérifiés avec OpenStreetMap et le cadastre. 5 écrans, 30 secondes.'],
   ['i-key','Lis les couleurs','<b style="color:#22d3ee">Cyan</b> vérifié par toi · <b style="color:#16a34a">vert</b> ouvert ou chemin rural au cadastre · <b style="color:#a3e635">vert clair</b> à vérifier · <b style="color:#facc15">jaune</b> agricole · <b style="color:#c084fc">violet</b> forêt ONF · <b style="color:#d97706">orange pointillé</b> bois non prouvé · <b style="color:#fb7185">rose</b> privé probable · <b style="color:#ef4444">rouge</b> interdit.'],
-  ['i-pencil','Trace carrefour par carrefour','Passe en <b style="color:#ff7a1a">Tracer</b> et touche la carte pour ton départ. À chaque carrefour, touche un choix pour le <b>voir</b> (photo, 📷 Street View tourné vers le chemin), puis réponds <b style="color:#22c55e">✓ Oui</b> ou <b>✗ Non</b>. <b>Boucler</b> te ramène au départ.'],
+  ['i-pencil','Trace carrefour par carrefour','Passe en <b style="color:#ff7a1a">Tracer</b> et touche la carte pour ton départ. À chaque carrefour, touche un choix pour le <b>voir</b> (photo, 📷 Street View tourné vers le chemin), puis réponds <b style="color:#22c55e">✓ Oui</b> ou <b>✗ Non</b>.'],
   ['i-cam','Contrôle chaque virage','Un point 📷 à chaque virage et entrée de chemin. <b>Contrôler les virages</b> : Street View s’ouvre face au chemin, réponds <b style="color:#22c55e">✓ OK</b> ou <b style="color:#ef4444">⛔ Interdit</b> : l’interdit est contourné au plus près, le reste ne bouge pas.'],
   ['i-ride','Retrouve et roule','Chaque itinéraire est gardé tout seul : aperçus en haut de <b>Tracé</b>, liste dans <b>Tracés</b>, ⭐ pour tes favoris. <b>Balade</b> pour le GPS, <b>GPX</b> pour OsmAnd ou CarPlay.<br><br><b>Le panneau sur place fait toujours foi.</b> Guide complet : Aide → Guide PDF.']];
 let tourI=0;
@@ -2109,8 +2059,7 @@ document.addEventListener('keydown',e=>{
 (function init(){
   if(prefs.auto===false)$('autoLoad').checked=false;
   if(prefs.pref)$('pref').value=prefs.pref;
-  if(prefs.loopKm){$('loopKm').value=prefs.loopKm;$('loopKmV').textContent=prefs.loopKm+' km';}
-  syncChips();showStats();
+  showStats();
   if(prefs.noReuse===false)$('noReuse').checked=false;
   buildControls();renderSaved();renderHist();updateInfo();syncVisibility();authInit();
   if(isTouch)collapse(true);else document.body.classList.add('pOpen');
