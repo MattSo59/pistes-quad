@@ -11,7 +11,7 @@
 
 ## Hébergement et comptes (v13, 9/11/2026)
 - Appli publiée à deux adresses : https://mattso59.github.io/pistes-quad/ (GitHub Pages, dépôt public) et https://quad.team-somatcha.fr/ (Worker Cloudflare `pistes-quad`, branche `publication`). Plus de Cloudflare Access (retiré).
-- Comptes maison : écran de connexion à l'ouverture. « Créer un compte » (prénom, e-mail, mot de passe ≥ 8) → compte **en attente** ; l'admin (`ADMIN_EMAIL` = djprofusion@me.com, validé d'office) valide / refuse / supprime dans Tracés → Mon compte → Comptes.
+- Comptes maison : écran de connexion à l'ouverture. « Créer un compte » (prénom, e-mail, mot de passe ≥ 8) → compte **en attente** ; l'admin (reconnu par `ADMIN_HASH`, l'empreinte SHA-256 de son e-mail, dans `worker/wrangler.jsonc` ; validé d'office) valide / refuse / supprime dans Tracés → Mon compte → Comptes.
 - API dans `worker/worker.js` sur quad.team-somatcha.fr/api (CORS autorisé pour github.io) : register, login (jeton 60 jours), me, logout, password, data, admin/users, admin/user. Mots de passe PBKDF2-SHA256 100 000 itérations + sel ; 10 essais ratés → blocage 15 min.
 - KV `DATA` → `pistes-quad-donnees` : `acct:<email>`, `sess:<jeton>`, `data:<email>`, `fail:<email>`.
 - Données synchronisées par compte (historique, favoris, notes, sorties, points vus). Hors ligne : l'appli reste utilisable si on s'est connecté une fois sur l'appareil. Déconnexion = données effacées de l'appareil (gardées sur le compte).

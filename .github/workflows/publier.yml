@@ -9,19 +9,14 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: publication
   cancel-in-progress: true
 
 jobs:
   publier:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploiement.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +47,7 @@ jobs:
           CADASTRE_CACHE: cadastre
         run: python3 tools/build_data.py osm/filtre.pbf site/data
 
-      - name: Déposer l'appli prête sur la branche « publication » (lue par le Worker Cloudflare)
+      - name: Déposer l'appli prête sur la branche « publication » (lue par Cloudflare et par GitHub Pages)
         run: |
           cp worker/worker.js worker/wrangler.jsonc worker/.assetsignore site/
           cd site
@@ -62,16 +57,3 @@ jobs:
           git add -A
           git commit -qm "Publication $(date -u +%F)"
           git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" publication
-
-      # Ancienne publication GitHub Pages (s'arrête d'elle-même quand le dépôt passe en privé)
-      - id: cp
-        uses: actions/configure-pages@v5
-        continue-on-error: true
-      - if: steps.cp.outcome == 'success'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-      - id: deploiement
-        if: steps.cp.outcome == 'success'
-        uses: actions/deploy-pages@v4
-        continue-on-error: true

@@ -14,5 +14,5 @@
   "kv_namespaces": [
     { "binding": "DATA", "id": "436fb6b434044298b9be96c808763442" }
   ],
-  "vars": { "ADMIN_EMAIL": "djprofusion@me.com" }
+  "vars": { "ADMIN_HASH": "d668b63a20c0abec0f1388be2a14f11f5d761390e3b21a0332d9938bdcc5d4d3" }
 }

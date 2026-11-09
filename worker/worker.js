@@ -6,7 +6,8 @@
      sess:<jeton>  → email (expire seul au bout de 60 jours)
      data:<email>  → données synchronisées de l'appli (historique, favoris, notes, sorties…)
      fail:<email>  → compteur d'échecs de connexion (15 min)
-   Variable : ADMIN_EMAIL (compte validé d'office, peut valider les autres). */
+   Variable : ADMIN_HASH = SHA-256 de l'e-mail de l'administrateur (compte validé d'office, peut valider les autres).
+   L'e-mail lui-même n'est écrit nulle part dans le dépôt. */
 
 const ORIGINS = ['https://quad.team-somatcha.fr', 'https://mattso59.github.io'];
 const SESSION_TTL = 60 * 24 * 3600;
@@ -42,7 +43,8 @@ async function hashPw(pw, saltHex) {
 }
 function sameStr(a, b) { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; }
 const getJ = async (env, k) => { const v = await env.DATA.get(k); return v ? JSON.parse(v) : null; };
-const pub = (a, env) => ({ email: a.email, name: a.name || '', status: a.status, created: a.created, admin: a.email === normEmail(env.ADMIN_EMAIL) });
+const pub = (a, adm) => ({ email: a.email, name: a.name || '', status: a.status, created: a.created, admin: !!adm });
+const sha = async t => hex(await crypto.subtle.digest('SHA-256', enc.encode(t)));
 
 async function session(req, env) {
   const m = (req.headers.get('Authorization') || '').match(/^Bearer ([0-9a-f]{64})$/);
@@ -58,7 +60,8 @@ async function body(req) { try { return await req.json(); } catch (e) { return {
 async function api(req, env, path) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
   if (!env.DATA) return json(req, { error: 'Stockage non configuré.' }, 503);
-  const admin = normEmail(env.ADMIN_EMAIL);
+  const adminHash = String(env.ADMIN_HASH || '').toLowerCase();
+  const isAdmin = async e => !!adminHash && (await sha(e)) === adminHash;
 
   if (path === '/api/register' && req.method === 'POST') {
     const b = await body(req);
@@ -67,7 +70,7 @@ async function api(req, env, path) {
     if (pw.length < 8 || pw.length > 200) return json(req, { error: 'Mot de passe : 8 caractères minimum.' }, 400);
     if (await env.DATA.get('acct:' + email)) return json(req, { error: 'Un compte existe déjà avec cette adresse.' }, 409);
     const salt = randHex(16);
-    const a = { email, name, salt, hash: await hashPw(pw, salt), status: email === admin ? 'approved' : 'pending', created: Date.now() };
+    const a = { email, name, salt, hash: await hashPw(pw, salt), status: (await isAdmin(email)) ? 'approved' : 'pending', created: Date.now() };
     await env.DATA.put('acct:' + email, JSON.stringify(a));
     return json(req, { ok: true, status: a.status });
   }
@@ -88,14 +91,14 @@ async function api(req, env, path) {
     const token = randHex(32);
     await env.DATA.put('sess:' + token, email, { expirationTtl: SESSION_TTL });
     await env.DATA.delete('fail:' + email);
-    return json(req, { token, user: pub(a, env) });
+    return json(req, { token, user: pub(a, await isAdmin(a.email)) });
   }
 
   const s = await session(req, env);
   if (!s) return json(req, { error: 'Non connecté.' }, 401);
   const me = s.acct;
 
-  if (path === '/api/me' && req.method === 'GET') return json(req, { user: pub(me, env) });
+  if (path === '/api/me' && req.method === 'GET') return json(req, { user: pub(me, await isAdmin(me.email)) });
 
   if (path === '/api/logout' && req.method === 'POST') { await env.DATA.delete('sess:' + s.token); return json(req, { ok: true }); }
 
@@ -122,12 +125,12 @@ async function api(req, env, path) {
   }
 
   if (path.startsWith('/api/admin/')) {
-    if (me.email !== admin) return json(req, { error: 'Réservé à l’administrateur.' }, 403);
+    if (!(await isAdmin(me.email))) return json(req, { error: 'Réservé à l’administrateur.' }, 403);
     if (path === '/api/admin/users' && req.method === 'GET') {
       const out = []; let cursor;
       do {
         const l = await env.DATA.list({ prefix: 'acct:', cursor });
-        for (const k of l.keys) { const a = await getJ(env, k.name); if (a) out.push(pub(a, env)); }
+        for (const k of l.keys) { const a = await getJ(env, k.name); if (a) out.push(pub(a, await isAdmin(a.email))); }
         cursor = l.list_complete ? null : l.cursor;
       } while (cursor);
       out.sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || b.created - a.created);
@@ -136,7 +139,7 @@ async function api(req, env, path) {
     if (path === '/api/admin/user' && req.method === 'POST') {
       const b = await body(req);
       const email = normEmail(b.email);
-      if (email === admin) return json(req, { error: 'Impossible de modifier le compte administrateur.' }, 400);
+      if (await isAdmin(email)) return json(req, { error: 'Impossible de modifier le compte administrateur.' }, 400);
       const a = await getJ(env, 'acct:' + email);
       if (!a) return json(req, { error: 'Compte introuvable.' }, 404);
       if (b.action === 'approve') { a.status = 'approved'; a.approvedAt = Date.now(); }
@@ -144,7 +147,7 @@ async function api(req, env, path) {
       else if (b.action === 'delete') { await env.DATA.delete('acct:' + email); await env.DATA.delete('data:' + email); return json(req, { ok: true }); }
       else return json(req, { error: 'Action inconnue.' }, 400);
       await env.DATA.put('acct:' + email, JSON.stringify(a));
-      return json(req, { ok: true, user: pub(a, env) });
+      return json(req, { ok: true, user: pub(a, false) });
     }
   }
   return json(req, { error: 'Introuvable.' }, 404);
