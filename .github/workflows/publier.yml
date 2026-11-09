@@ -8,7 +8,7 @@ on:
     - cron: '17 3 1 * *'   # le 1er de chaque mois : données OSM fraîches
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -52,9 +52,25 @@ jobs:
           CADASTRE_CACHE: cadastre
         run: python3 tools/build_data.py osm/filtre.pbf site/data
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Déposer l'appli prête sur la branche « publication » (lue par Cloudflare Pages)
+        run: |
+          cd site
+          git init -q -b publication
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Publication $(date -u +%F)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" publication
+
+      # Ancienne publication GitHub Pages (s'arrête d'elle-même quand le dépôt passe en privé)
+      - id: cp
+        uses: actions/configure-pages@v5
+        continue-on-error: true
+      - if: steps.cp.outcome == 'success'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site
       - id: deploiement
+        if: steps.cp.outcome == 'success'
         uses: actions/deploy-pages@v4
+        continue-on-error: true
