@@ -199,7 +199,7 @@ table.tags{border-collapse:collapse;margin-top:6px}table.tags td{padding:1px 8px
 kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;border:1px solid var(--line)}
 .prog{height:8px;background:var(--card2);border-radius:4px;overflow:hidden;margin:8px 0}.prog div{height:100%;background:linear-gradient(90deg,var(--blue),var(--orange));width:0}
 /* feuille de route et entrées de chemin */
-.ent{width:26px;height:26px;border-radius:50%;background:var(--c);border:3px solid #fff;color:#0a1426;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px #000a}
+.ent{font-size:11px!important;width:24px;height:24px;border-radius:50%;background:var(--c);border:3px solid #fff;color:#0a1426;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px #000a}
 .ent.ok{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.45),0 2px 6px #000a}
 .rb{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
 .rb:first-child{border-top:0}
@@ -554,7 +554,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v15</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v16</div>
   </div>
 
   </div>
@@ -1135,7 +1135,7 @@ function ckTitle(c){return c.enter?`Entrée de chemin (${c.side})`:`Virage ${c.s
 function drawEntries(){
   entryLayer.clearLayers();
   checks().forEach((c,i)=>{const ok=ckOk(c);
-    L.marker(c.at,{zIndexOffset:500,icon:L.divIcon({className:'',html:`<div class="ent${ok?' ok':''}" style="--c:${CATS[c.cat].color}">${ok?'✓':c.n}</div>`,iconSize:[26,26],iconAnchor:[13,13]})})
+    L.marker(c.at,{zIndexOffset:500,icon:L.divIcon({className:'',html:`<div class="ent${ok?' ok':''}" style="--c:${CATS[c.cat].color}" title="Point à vérifier dans Street View">${ok?'✓':'📷'}</div>`,iconSize:[24,24],iconAnchor:[12,12]})})
       .on('click',e=>{L.DomEvent.stopPropagation(e);openCheck(i);}).addTo(entryLayer);});
 }
 function highlight(c){hlLayer.clearLayers();if(!lastRoute)return;const st=lastRoute.steps,end=(checks()[c.n]||{}).si||st.length;const cs=[c.at];for(let j=c.si;j<end;j++)cs.push(st[j].b);
