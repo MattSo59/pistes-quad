@@ -399,6 +399,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
         <button class="btn" id="bLink"><svg class="ic"><use href="#i-link"/></svg>Envoyer</button>
         <button class="btn" id="bElev"><svg class="ic"><use href="#i-mount"/></svg>Profil</button>
       </div>
+      <div id="finishBox"></div>
       <div id="saveBox"></div>
       <div id="profile"></div>
       <div class="tip"><svg class="ic"><use href="#i-pencil"/></svg><span>À la main : <b>Tracer</b>, puis touche la carte. Les points se déplacent au doigt.</span></div>
@@ -555,7 +556,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v17</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v18</div>
   </div>
 
   </div>
@@ -583,7 +584,7 @@ const CATS={
   dom  :{label:'Chemin en forêt domaniale (ONF)',       color:'#c084fc',w:3.5, dash:'2 6',route:false,show:true},
   bois :{label:'Forêt / bois, accès non prouvé',        color:'#d97706',w:3.5, dash:'5 5',route:false,show:true},
   restr:{label:'Privé probable / riverains / restreint',    color:'#fb7185',w:3,   dash:'4 4',route:false,show:true},
-  road :{label:'Route goudronnée (liaison)',            color:'#60a5fa',w:2.5, route:true, show:false},
+  road :{label:'Route goudronnée (liaison)',            color:'#60a5fa',w:2.5, route:true, show:true},
   no   :{label:'Interdit / sentier / voie rapide',      color:'#dc2626',w:2,   dash:'2 4',route:false,show:true, locked:'noroute'}
 };
 const TRAIL_CATS=new Set(['mine','open','unk','agri','dom','restr','bois']);
@@ -607,6 +608,7 @@ const DB={db:null,
   clear(){return this.tx('readwrite',s=>s.clear()).catch(()=>null)}
 };
 const prefs=LS.get('pq_prefs',{});
+if(!LS.get('pq_road_on',false)){prefs.s_road=true;prefs.r_road=true;LS.set('pq_road_on',true);}   // v18 : routes de liaison activées par défaut
 for(const k in CATS){if(prefs['r_'+k]!==undefined&&!CATS[k].locked)CATS[k].route=prefs['r_'+k];if(prefs['s_'+k]!==undefined)CATS[k].show=prefs['s_'+k];}
 let notes=LS.get('pq_notes',{});   // wayId -> {s:'ok'|'no', n:texte, d:date}
 function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,noReuse:$('noReuse').checked,server:prefs.server||'',gkey:prefs.gkey||''};
@@ -1260,7 +1262,7 @@ function takeBranch(b){
 function finishRoute(){
   juncHidden=true;preview=null;renderJunction();setMode('explore');
   showPane('pRoute');
-  const r=lastRoute,box=$('saveBox');if(!box)return;
+  const r=lastRoute,box=$('finishBox');if(!box)return;
   box.innerHTML=`<div class="finish"><b style="font-size:16px">🏁 Itinéraire terminé${r?' · '+km(r.dist):''}</b>
     <div class="muted" style="margin-top:4px">Pour rouler avec CarPlay ou Android Auto : envoie le fichier GPX dans <b>OsmAnd</b> (gratuit), puis « Suivre la trace ».</div>
     <button class="btn primary" id="fGpx">🚗 Envoyer vers CarPlay / GPS (GPX)</button>
@@ -1428,6 +1430,7 @@ function assemble(LP,P){
 function seedLegs(lp){legCache.clear();const P=routePts();if(!lp)return;for(let i=0;i<P.length-1&&i<lp.length;i++)if(lp[i])legCache.set(wkey(P[i])+'>'+wkey(P[i+1]),lp[i]);}
 let patchedN=0;
 function computeRoute(){
+  if($('finishBox')&&mode==='trace')$('finishBox').innerHTML='';
   routeLayer.clearLayers();entryLayer.clearLayers();hlLayer.clearLayers();lastRoute=null;$('roadbook').style.display='none';
   if(wps.length<2){showStats();saveDraft();juncHidden=false;preview=null;renderJunction();renderTimeline();return;}
   if(!ways.size){showStats('Les chemins ne sont pas encore chargés pour cette zone.');L.polyline(wps,{color:'#ff7a1a',weight:3,dashArray:'6 8'}).addTo(routeLayer);return;}
@@ -1520,7 +1523,7 @@ function drawWps(){
   });
 }
 $('bUndo').onclick=()=>{wps.pop();drawWps();scheduleRoute();};
-$('bClear').onclick=()=>{legCache.clear();curId=null;LS.set('pq_cur',null);renderHist();wps=[];drawWps();scheduleRoute();$('profile').innerHTML='';};
+$('bClear').onclick=()=>{$('finishBox').innerHTML='';legCache.clear();curId=null;LS.set('pq_cur',null);renderHist();wps=[];drawWps();scheduleRoute();$('profile').innerHTML='';};
 $('bRev').onclick=()=>{wps.reverse();drawWps();scheduleRoute();};
 $('loop').onchange=scheduleRoute;
 $('noReuse').onchange=()=>{savePrefs();scheduleRoute();};
@@ -1631,7 +1634,7 @@ function gpx(name,coords,pts,times){
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Pistes Quad SSV" xmlns="http://www.topografix.com/GPX/1/1">
 <metadata><name>${esc(name)}</name><time>${new Date().toISOString()}</time></metadata>
-${(pts||[]).map((p,i)=>`<wpt lat="${(+p[0]).toFixed(6)}" lon="${(+p[1]).toFixed(6)}"><name>${i===0?'Départ':'Point '+(i+1)}</name></wpt>`).join('\n')}
+${(pts||[]).map((p,i)=>`<wpt lat="${(+p[0]).toFixed(6)}" lon="${(+p[1]).toFixed(6)}"><name>${esc(p[2]||(i===0?'Départ':'Point '+(i+1)))}</name></wpt>`).join('\n')}
 <trk><name>${esc(name)}</name><trkseg>
 ${coords.map((c,i)=>`<trkpt lat="${(+c[0]).toFixed(6)}" lon="${(+c[1]).toFixed(6)}">${times&&times[i]?'<time>'+new Date(times[i]).toISOString()+'</time>':''}</trkpt>`).join('\n')}
 </trkseg></trk></gpx>`;
@@ -1650,7 +1653,8 @@ const slug=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/gi,'
 $('bGpx').onclick=()=>{
   if(!lastRoute||lastRoute.coords.length<2){toast('Pas encore d’itinéraire à exporter.');return;}
   const name='Quad '+new Date().toLocaleDateString('fr-FR')+' '+km(lastRoute.dist);
-  shareFile(slug(name)+'.gpx',gpx(name,lastRoute.coords,wps.map(ll2a)));
+  const C=lastRoute.coords,A=C[0],Z=C[C.length-1];
+  shareFile(slug(name)+'.gpx',gpx(name,C,[[A[0],A[1],'Départ'],[Z[0],Z[1],'Arrivée']]));
 };
 $('bOsmand').onclick=()=>$('bGpx').onclick();
 $('bLink').onclick=async()=>{
@@ -2074,10 +2078,10 @@ $('bLayers').onclick=()=>showPane('pLayers');
   h.addEventListener('click',()=>{if(!isTouch)collapse(!$('panel').classList.contains('collapsed'));});})();
 const TOUR=[
   ['i-route','Bienvenue sur Pistes Quad','Un maximum de chemins autorisés aux quads et SSV autour de Fourmies, vérifiés avec OpenStreetMap et le cadastre. 5 écrans, 30 secondes.'],
-  ['i-key','Lis les couleurs','<b style="color:#22d3ee">Cyan</b> vérifié par toi · <b style="color:#16a34a">vert</b> ouvert ou chemin rural au cadastre · <b style="color:#a3e635">vert clair</b> à vérifier · <b style="color:#facc15">jaune</b> agricole · <b style="color:#c084fc">violet</b> forêt ONF · <b style="color:#d97706">orange pointillé</b> bois non prouvé · <b style="color:#fb7185">rose</b> privé probable · <b style="color:#ef4444">rouge</b> interdit.'],
-  ['i-pencil','Trace carrefour par carrefour','Passe en <b style="color:#ff7a1a">Tracer</b> et touche la carte pour ton départ. À chaque carrefour, touche un choix pour le <b>voir</b> (photo, 📷 Street View tourné vers le chemin), puis réponds <b style="color:#22c55e">✓ Oui</b> ou <b>✗ Non</b>.'],
-  ['i-cam','Contrôle chaque virage','Un point 📷 à chaque virage et entrée de chemin. <b>Contrôler les virages</b> : Street View s’ouvre face au chemin, réponds <b style="color:#22c55e">✓ OK</b> ou <b style="color:#ef4444">⛔ Interdit</b> : l’interdit est contourné au plus près, le reste ne bouge pas.'],
-  ['i-ride','Retrouve et roule','Chaque itinéraire est gardé tout seul : aperçus en haut de <b>Tracé</b>, liste dans <b>Tracés</b>, ⭐ pour tes favoris. <b>Balade</b> pour le GPS, <b>GPX</b> pour OsmAnd ou CarPlay.<br><br><b>Le panneau sur place fait toujours foi.</b> Guide complet : Aide → Guide PDF.']];
+  ['i-key','Lis les couleurs','<b style="color:#22d3ee">Cyan</b> vérifié par toi · <b style="color:#16a34a">vert</b> ouvert ou chemin rural au cadastre · <b style="color:#a3e635">vert clair</b> à vérifier · <b style="color:#facc15">jaune</b> agricole · <b style="color:#c084fc">violet</b> forêt ONF · <b style="color:#d97706">orange pointillé</b> bois non prouvé · <b style="color:#fb7185">rose</b> privé probable · <b style="color:#ef4444">rouge</b> interdit · <b style="color:#60a5fa">bleu</b> route goudronnée (liaison).'],
+  ['i-pencil','Trace carrefour par carrefour','Passe en <b style="color:#ff7a1a">Tracer</b> et touche la carte pour ton départ. À chaque carrefour : <b>Voir</b> pour regarder le chemin (photo, 📷 Street View tourné vers lui), ou <b style="color:#22c55e">✓</b> pour le prendre tout de suite. Une erreur ? <b>↩ Annuler</b>.'],
+  ['i-cam','Contrôle où tu veux','Touche ton tracé n’importe où : Street View s’ouvre <b>dans le sens de ta marche</b>. Un panneau d’interdiction ? Note le chemin <b style="color:#ef4444">⛔ interdit</b>, il ne sera plus proposé. Quand tu as fini : <b>🏁 Terminer ici</b>.'],
+  ['i-ride','Retrouve et roule','Chaque itinéraire est gardé tout seul : aperçus en haut de <b>Tracé</b>, liste dans <b>Tracés</b>, ⭐ pour tes favoris. <b>Balade</b> pour le GPS, <b>🚗 GPX</b> pour OsmAnd / CarPlay.<br><br><b>Le panneau sur place fait toujours foi.</b> Guide complet : Aide → Guide PDF.']];
 let tourI=0;
 function tour(i){tourI=i;const w=$('welcome');w.style.display='flex';const t=TOUR[i];
   $('wIc').innerHTML=`<use href="#${t[0]}"/>`;$('wT').textContent=t[1];$('wP').innerHTML=t[2];
