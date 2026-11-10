@@ -568,7 +568,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v23</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v24</div>
   </div>
 
   </div>
@@ -597,6 +597,7 @@ const CATS={
   bois :{label:'Forêt / bois, accès non prouvé',        color:'#d97706',w:3.5, dash:'5 5',route:false,show:true},
   restr:{label:'Privé probable / riverains / restreint',    color:'#fb7185',w:3,   dash:'4 4',route:false,show:true},
   road :{label:'Route goudronnée (liaison)',            color:'#60a5fa',w:2.5, route:true, show:true},
+  gpx  :{label:'Trace GPX importée (non vérifiée)',     color:'#0ea5e9',w:3,   dash:'6 6',route:true, show:true, locked:'route'},
   no   :{label:'Interdit / sentier / voie rapide',      color:'#dc2626',w:2,   dash:'2 4',route:false,show:true, locked:'noroute'}
 };
 const TRAIL_CATS=new Set(['mine','open','unk','agri','dom','restr','bois']);
@@ -622,6 +623,7 @@ const DB={db:null,
 const prefs=LS.get('pq_prefs',{});
 if(!LS.get('pq_road_on',false)){prefs.s_road=true;prefs.r_road=true;LS.set('pq_road_on',true);}   // v18 : routes de liaison activées par défaut
 for(const k in CATS){if(prefs['r_'+k]!==undefined&&!CATS[k].locked)CATS[k].route=prefs['r_'+k];if(prefs['s_'+k]!==undefined)CATS[k].show=prefs['s_'+k];}
+const linkOut=l=>{const o={id:l.id,a:l.a,b:l.b};if(l.pts){o.pts=l.pts;o.n=l.n;o.name=l.name;}if(l.auto)o.auto=1;return o;};
 let links=LS.get('pq_links',[]);   // liaisons ajoutées à la main : {id,a:[lat,lon],b:[lat,lon]}
 let notes=LS.get('pq_notes',{});   // wayId -> {s:'ok'|'no', n:texte, d:date}
 function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,noReuse:$('noReuse').checked,arrows:$('showArrows').checked,svSide:$('svSide').checked,server:prefs.server||'',gkey:prefs.gkey||''};
@@ -711,6 +713,7 @@ function classify(t){
   return['road','route publique'];
 }
 function classifyWay(w){
+  if(w.tags._free){w.cat=w.base='gpx';w.reason=w.baseReason='Trace GPX importée telle quelle : autorisations non vérifiées';w.sus=false;return;}
   let [c,r]=classify(w.tags);w.dom=inDomForest(w);
   if(w.dom&&(c==='unk'||c==='restr'||c==='bois')){c='dom';r+=' · situé en forêt domaniale';}
   const n=notes[w.id];
@@ -918,6 +921,7 @@ $('bFourmies').onclick=()=>{map.setView(FOURMIES,12);ensureTiles(tilesIn(L.latLn
 
 /* ---------- Rendu ---------- */
 function drawWay(w){
+  if(w.tags._free)return;
   const old=wayPl.get(w.id);if(old)old._g.removeLayer(old);
   const ll=[];for(const id of w.nds){const p=nodes.get(id);if(p)ll.push(p);}
   if(ll.length<2)return;
@@ -1005,6 +1009,7 @@ function costFactor(w,rp){
 function onewayDir(t){const o=t.oneway;if(o==='yes'||o==='1'||t.junction==='roundabout')return 1;if(o==='-1')return -1;return 0;}
 function buildGraph(){
   const rp=+$('pref').value;adj=new Map();
+  for(const id of (buildGraph._fw||[]))ways.delete(id);buildGraph._fw=[];
   const blocked=new Set(),gates=new Set();
   for(const[id,t]of barriers){if(IMPASSABLE.has(t.barrier))blocked.add(id);else if(GATE.has(t.barrier))gates.add(id);}
   const add=(u,v,c,d,w,rd)=>{let l=adj.get(u);if(!l){l=[];adj.set(u,l);}l.push([v,c,d,w,rd]);};
@@ -1054,16 +1059,30 @@ function buildGraph(){
     }
     add(u,target,bd*1.5+20,bd,ownW,own[4]);add(target,u,bd*1.5+20,bd,ownW,own[4]);bridges++;
   }
+  /* Traces GPX importées : reprises point par point, sans aucun recalcul */
+  for(const lk of links){
+    if(!lk.pts||lk.pts.length<2)continue;
+    const base=-(1e14+lk.n*1e6),ids=lk.pts.map((q,k)=>base-k),wid=-(1e14+lk.n);
+    lk.pts.forEach((q,k)=>{nodes.set(ids[k],q);buildGraph._virt.push(ids[k]);});
+    ways.set(wid,{id:wid,tags:{highway:'track',name:lk.name||'Trace GPX',_free:'1'},nds:ids,cat:'gpx',base:'gpx',reason:'Trace GPX importée telle quelle : autorisations non vérifiées',baseReason:'',sus:false,spur:false});
+    buildGraph._fw.push(wid);
+    for(let k=0;k<ids.length-1;k++){const d=hav(lk.pts[k],lk.pts[k+1]);add(ids[k],ids[k+1],d,d,wid,2);add(ids[k+1],ids[k],d,d,wid,2);
+      const e=adj.get(ids[k])[adj.get(ids[k]).length-1],p0=lk.pts[k],q0=lk.pts[k+1];
+      for(let i=Math.floor(Math.min(p0[0],q0[0])/CY);i<=Math.floor(Math.max(p0[0],q0[0])/CY)&&i-Math.floor(Math.min(p0[0],q0[0])/CY)<40;i++)
+        for(let j=Math.floor(Math.min(p0[1],q0[1])/CX);j<=Math.floor(Math.max(p0[1],q0[1])/CX)&&j-Math.floor(Math.min(p0[1],q0[1])/CX)<40;j++){const kk=cell(i,j);let c=G.get(kk);if(!c){c=[];G.set(kk,c);}c.push([ids[k],ids[k+1],e]);}}
+    lk._nodes=ids;
+  }
   /* Liaisons ajoutées à la main (chemin réel mais absent ou coupé dans OpenStreetMap) */
   for(const lk of links){
+    if(lk.pts)continue;
     lk._a=lk._b=null;
     const a=nearestNode(lk.a,10);if(a==null)continue;
-    let b=nearestNode(lk.b,15);
+    let b=lk.auto?null:nearestNode(lk.b,15);
     if(b==null||b===a){b=null;
-      const p=lk.b,kx=111320*Math.cos(p[0]*Math.PI/180),ky=110540;let best=null,bd=45;const seen=new Set();
+      const p=lk.b,kx=111320*Math.cos(p[0]*Math.PI/180),ky=110540;let best=null,bd=lk.auto?25:45;const seen=new Set();
       const ci=Math.floor(p[0]/CY),cj=Math.floor(p[1]/CX);
       for(let di=-2;di<=2;di++)for(let dj=-2;dj<=2;dj++)for(const sg of (G.get(cell(ci+di,cj+dj))||[])){
-        if(seen.has(sg))continue;seen.add(sg);const[a0,b0,e]=sg;if(a0===a||b0===a)continue;
+        if(seen.has(sg))continue;seen.add(sg);const[a0,b0,e]=sg;if(a0===a||b0===a||(lk.auto&&e[3]<=-1e14))continue;
         const A=nodes.get(a0),B=nodes.get(b0);
         const ax=(A[1]-p[1])*kx,ay=(A[0]-p[0])*ky,bx=(B[1]-p[1])*kx,by=(B[0]-p[0])*ky,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;
         const t=L2?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L2)):0,d=Math.hypot(ax+t*dx,ay+t*dy);
@@ -1270,12 +1289,22 @@ function routeEnd(){
 const nbSet=u=>new Set((adj.get(u)||[]).map(e=>e[0]));
 /* ---- Liaisons à la main : relier le bout du tracé à un chemin ou une route quand la carte a un trou ---- */
 let linkMode=false;const linkLayer=L.layerGroup().addTo(map);
-function saveLinks(){LS.set('pq_links',links.map(l=>({id:l.id,a:l.a,b:l.b})));syncSoon();}
-function drawLinks(){linkLayer.clearLayers();
-  for(const lk of links)L.polyline([lk.a,lk.b],{color:'#22d3ee',weight:5,dashArray:'2 8',lineCap:'round'}).bindTooltip('Liaison ajoutée à la main')
-    .on('click',e=>{L.DomEvent.stopPropagation(e);const n=el('<b>Liaison ajoutée à la main</b><div class="muted">Chemin absent ou coupé sur la carte, relié par toi.</div><div class="links"><button data-a="del">🗑 Supprimer cette liaison</button></div>');
-      n.querySelector('[data-a=del]').onclick=()=>{map.closePopup();links=links.filter(x=>x.id!==lk.id);tomb('l:'+lk.id);saveLinks();drawLinks();graphDirty=true;legCache.clear();computeRoute();toast('Liaison supprimée.',2000);};
-      L.popup().setLatLng(e.latlng).setContent(n).openOn(map);}).addTo(linkLayer);}
+function saveLinks(){LS.set('pq_links',links.map(linkOut));syncSoon();}
+function delLink(lk,msg){map.closePopup();links=links.filter(x=>x.id!==lk.id);tomb('l:'+lk.id);saveLinks();drawLinks();graphDirty=true;legCache.clear();computeRoute();toast(msg,2500);}
+function drawLinks(){linkLayer.clearLayers();catLayers.gpx.clearLayers();
+  for(const lk of links){
+    if(lk.pts){
+      L.polyline(lk.pts,{color:CATS.gpx.color,weight:4,dashArray:'6 7',opacity:.9}).bindTooltip('Trace GPX importée : '+esc(lk.name||''))
+        .on('click',e=>{L.DomEvent.stopPropagation(e);if(mode==='trace'){linkMode?makeLink(e.latlng):addWp(e.latlng);return;}
+          const n=el(`<b>Trace GPX importée</b><div>${esc(lk.name||'')}</div><div class="muted">Reprise point par point, sans recalcul. Autorisations non vérifiées.</div><div class="links"><button data-a="del">🗑 Retirer cette trace de la carte</button></div>`);
+          n.querySelector('[data-a=del]').onclick=()=>delLink(lk,'Trace GPX retirée.');
+          L.popup().setLatLng(e.latlng).setContent(n).openOn(map);}).addTo(catLayers.gpx);
+      continue;}
+    L.polyline([lk.a,lk.b],{color:'#22d3ee',weight:5,dashArray:'2 8',lineCap:'round'}).bindTooltip('Liaison ajoutée à la main')
+      .on('click',e=>{L.DomEvent.stopPropagation(e);const n=el('<b>Liaison ajoutée à la main</b><div class="muted">Chemin absent ou coupé sur la carte, relié par toi.</div><div class="links"><button data-a="del">🗑 Supprimer cette liaison</button></div>');
+        n.querySelector('[data-a=del]').onclick=()=>delLink(lk,'Liaison supprimée.');
+        L.popup().setLatLng(e.latlng).setContent(n).openOn(map);}).addTo(linkLayer);}
+}
 function setLinkMode(v){linkMode=v;map.getContainer().style.cursor=v?'crosshair':'';if(v)toast('Touche l’endroit à rejoindre : la route ou le chemin en couleur, là où ton chemin débouche.',6000);renderJunction();}
 function makeLink(ll){
   const re=routeEnd();if(!re){toast('Place d’abord ton départ.',3000);setLinkMode(false);return;}
@@ -1342,7 +1371,7 @@ function finishRoute(){
   $('fMore').onclick=()=>{box.innerHTML='';juncHidden=false;setMode('trace');renderJunction();};
   box.scrollIntoView({behavior:'smooth',block:'center'});
 }
-const SHORT={mine:'Vérifié ✓',open:'Chemin ouvert',unk:'Sans restriction connue',agri:'Agricole',dom:'Forêt ONF',restr:'Privé probable',road:'Route',no:'Interdit',bois:'Bois non prouvé'};
+const SHORT={mine:'Vérifié ✓',open:'Chemin ouvert',unk:'Sans restriction connue',agri:'Agricole',dom:'Forêt ONF',restr:'Privé probable',road:'Route',no:'Interdit',bois:'Bois non prouvé',gpx:'Trace GPX'};
 let preview=null;
 const cap=t=>t?t[0].toUpperCase()+t.slice(1):'';
 function branchTitle(b){return (b.dir?cap(b.dir)+' · ':'')+(b.off?(b.cat==='no'?'Interdit':(SHORT[b.cat]||'')+' (exclu)'):(SHORT[b.cat]||''));}
@@ -1579,13 +1608,27 @@ function routeCheckAt(ll){
 /* Couper le tracé à un endroit : on garde le début, on repart de là carrefour par carrefour */
 function cutRouteAt(k){
   const r=lastRoute;if(!r)return;map.closePopup();
-  let li=r.legs.findIndex(lg=>k>=lg.s&&k<=lg.e);if(li<0)li=r.legs.length-1;
-  const lg=r.legs[li],p=r.coords[k];
-  let keep=wps.slice(0,li+1);
-  if(k>=lg.e)keep=wps.slice(0,li+2);
-  else if(k>lg.s)keep.push(L.latLng(p[0],p[1]));
+  let li=r.legs.findIndex(lg=>!lg.fail&&k>=lg.s&&k<=lg.e);if(li<0)li=r.legs.length-1;
+  const lg=r.legs[li],p=r.coords[k],lp=r.lp[li];
+  let keep=wps.slice(0,li+1),endNode=null;
+  if(k>=lg.e){keep=wps.slice(0,li+2);endNode=lp&&lp[lp.length-1];}
+  else if(k>lg.s){
+    const to=L.latLng(p[0],p[1]);
+    // le début de l'étape est gardé tel quel (aucun recalcul), jusqu'au point de coupe
+    if(lp){let j=-1;for(const c of [k-lg.s,k-lg.s-1,k-lg.s+1])if(c>=0&&c<lp.length&&nodes.get(lp[c])===p){j=c;break;}
+      if(j>0){legCache.set(wkey(wps[li])+'>'+wkey(to),lp.slice(0,j+1));endNode=lp[j];}}
+    keep.push(to);
+  }
   if(keep.length<1)keep=[wps[0]];
-  wps=keep;$('finishBox').innerHTML='';setMode('trace');drawWps();computeRoute();
+  wps=keep;
+  // coupe sur une trace GPX : petit raccord vers la route ou le chemin connu juste à côté (25 m au plus)
+  if(endNode!=null&&endNode<=-1e14){
+    const lk={id:Date.now(),a:[p[0],p[1]],b:[p[0],p[1]],auto:1};links.push(lk);buildGraph();
+    if(lk._b==null){links.pop();graphDirty=true;}
+    else{const Q=nodes.get(lk._b),to=L.latLng(Q[0],Q[1]),from=wps[wps.length-1];saveLinks();drawLinks();
+      if(wkey(from)!==wkey(to)){legCache.set(wkey(from)+'>'+wkey(to),[lk._a,lk._b]);wps.push(to);}}
+  }
+  $('finishBox').innerHTML='';setMode('trace');drawWps();computeRoute();
   toast('Tracé coupé ici ✂ · choisis la suite dans la liste',3000);
 }
 /* Flèches de sens le long du tracé */
@@ -1644,19 +1687,24 @@ function simplifyTrack(pts,tol,maxGap){
   return out;
 }
 async function gpxToRoute(pts,name){
-  const total=pts.reduce((d,p,i)=>i?d+hav(pts[i-1],p):0,0);
-  let tol=25,W=simplifyTrack(pts,tol,400);
-  while(W.length>160&&tol<200){tol*=1.5;W=simplifyTrack(pts,tol,600);}
+  // la trace est reprise point par point : rien n'est recalculé ni déplacé
+  const P=[];for(const q of pts){const l=P[P.length-1];if(!l||l[0]!==q[0]||l[1]!==q[1])P.push([q[0],q[1]]);}
+  if(P.length<2){toast('GPX trop court.',3000);return;}
+  const total=P.reduce((d,q,i)=>i?d+hav(P[i-1],q):0,0);
+  const lk={id:Date.now(),n:links.reduce((m,l)=>Math.max(m,l.n||0),0)+1,a:P[0],b:P[P.length-1],pts:P,name};
+  links.push(lk);saveLinks();drawLinks();graphDirty=true;
   curId=null;lastRoute=null;legCache.clear();$('loop').checked=false;$('finishBox').innerHTML='';
-  wps=W.map(p=>L.latLng(p[0],p[1]));
+  wps=[L.latLng(P[0][0],P[0][1]),L.latLng(P[P.length-1][0],P[P.length-1][1])];
   if(!trkVisible)setTrkVisible(true);
   setMode('explore');drawWps();
-  const b=L.latLngBounds(pts).pad(0.12);map.fitBounds(b);
-  toast('GPX « '+name+' » : chargement des chemins…',4000);
+  const b=L.latLngBounds(P).pad(0.05);map.fitBounds(b);
+  toast('GPX « '+name+' » : chargement de la carte autour…',4000);
   try{await ensureTiles(tilesIn(b),false,'GPX à modifier');}catch(e){}
+  buildGraph();
+  legCache.set(wkey(wps[0])+'>'+wkey(wps[1]),lk._nodes);
   computeRoute();
-  const r=lastRoute,f=r?r.fails.length:0;
-  toast(r?`GPX prêt à modifier : ${km(r.dist)} (original ${km(total)})`+(f?` · ${f} passage(s) hors chemins connus, en pointillé`:'')+'. Déplace les points, coupe ✂ ou passe en Tracer.':'GPX chargé, mais aucun chemin connu dessous (hors zone ?).',7000);
+  const r=lastRoute;
+  toast(r&&!r.fails.length?`GPX repris à l’identique : ${km(r.dist)}, ${P.length} points. Pour le modifier : touche le tracé puis ✂ Couper ici, et continue carrefour par carrefour.`:'GPX affiché, mais le tracé n’a pas pu être préparé (carte non chargée ?). Zoome sur la trace et réessaie.',8000);
 }
 $('gpxEdit').onchange=async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
@@ -1850,7 +1898,7 @@ let tombs=LS.get('pq_tombs',{});
 function tomb(k){tombs[k]=Date.now();LS.set('pq_tombs',tombs);}
 function saveNotes(){LS.set('pq_notes',notes);syncSoon();}
 function syncSoon(){if(!SYNC.on)return;clearTimeout(SYNC.t);SYNC.t=setTimeout(syncPush,3000);}
-function localState(){return{v:4,upd:Date.now(),hist,notes,links:links.map(l=>({id:l.id,a:l.a,b:l.b})),rides:LS.get('pq_routes',[]).filter(r=>r.type==='ride'),seen:seenPts,tombs};}
+function localState(){return{v:4,upd:Date.now(),hist,notes,links:links.map(linkOut),rides:LS.get('pq_routes',[]).filter(r=>r.type==='ride'),seen:seenPts,tombs};}
 async function apiCall(path,opt={}){
   const h={'Content-Type':'application/json'};if(AUTH)h.Authorization='Bearer '+AUTH.token;
   const r=await fetch(API+path,{method:opt.method||'GET',headers:h,body:opt.body!==undefined?(typeof opt.body==='string'?opt.body:JSON.stringify(opt.body)):undefined,cache:'no-store'});
@@ -1876,9 +1924,9 @@ function mergeRemote(d){
   hist=[...byId.values()].filter(h=>!tombs['h:'+h.id]);
   // liaisons à la main
   {const have=new Set(links.map(l=>l.id));let ch=false;
-    for(const l of d.links||[])if(!have.has(l.id)&&!tombs['l:'+l.id]){links.push({id:l.id,a:l.a,b:l.b});ch=true;}
+    for(const l of d.links||[])if(!have.has(l.id)&&!tombs['l:'+l.id]){links.push(linkOut(l));ch=true;}
     const n0=links.length;links=links.filter(l=>!tombs['l:'+l.id]);
-    if(ch||links.length!==n0){LS.set('pq_links',links.map(l=>({id:l.id,a:l.a,b:l.b})));drawLinks();graphDirty=true;changed=true;}}
+    if(ch||links.length!==n0){LS.set('pq_links',links.map(linkOut));drawLinks();graphDirty=true;changed=true;}}
   // notes de chemins
   const touched=[];
   for(const id in d.notes||{}){const n=d.notes[id];if(!notes[id]||(n.d||0)>(notes[id].d||0)){notes[id]=n;touched.push(id);}}
