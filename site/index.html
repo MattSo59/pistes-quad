@@ -189,6 +189,7 @@ table.tags{border-collapse:collapse;margin-top:6px}table.tags td{padding:1px 8px
 #roadbook{display:none!important}
 .arw{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:13px solid #fff;filter:drop-shadow(0 0 2px #000a);transform-origin:50% 50%}
 .fab.off{opacity:.55}
+.poi{width:28px;height:28px;border-radius:50%;background:var(--c,#0ea5e9);border:2px solid #fff;box-shadow:0 2px 6px #0009;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1}
 .wpd{width:14px;height:14px;border-radius:50%;background:var(--orange);border:3px solid #fff;box-shadow:0 2px 5px #0009}
 .jr .go{background:#16a34a;color:#fff;border-color:#16a34a;font-weight:800;padding:8px 12px}
 #junc .jh .undo{background:#fff;color:#0a1426;font-weight:800}
@@ -470,6 +471,11 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <label class="row"><input type="checkbox" id="showForests" checked> Forêts domaniales (ONF)</label>
       <label class="row"><input type="checkbox" id="showAreas"> Zones de données chargées</label>
     </section>
+    <section class="card">
+      <div class="card-h"><svg class="ic"><use href="#i-loc"/></svg>Points d'intérêt</div>
+      <div id="poiCats"></div>
+      <div class="muted" id="poiInfo"></div>
+    </section>
     <details class="card">
       <summary>Données et hors-ligne</summary>
       <label class="row"><input type="checkbox" id="autoLoad" checked> Charger en me déplaçant sur la carte</label>
@@ -562,7 +568,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v20</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v21</div>
   </div>
 
   </div>
@@ -618,7 +624,10 @@ if(!LS.get('pq_road_on',false)){prefs.s_road=true;prefs.r_road=true;LS.set('pq_r
 for(const k in CATS){if(prefs['r_'+k]!==undefined&&!CATS[k].locked)CATS[k].route=prefs['r_'+k];if(prefs['s_'+k]!==undefined)CATS[k].show=prefs['s_'+k];}
 let notes=LS.get('pq_notes',{});   // wayId -> {s:'ok'|'no', n:texte, d:date}
 function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,noReuse:$('noReuse').checked,arrows:$('showArrows').checked,svSide:$('svSide').checked,server:prefs.server||'',gkey:prefs.gkey||''};
-  for(const k in CATS){p['r_'+k]=CATS[k].route;p['s_'+k]=CATS[k].show;}LS.set('pq_prefs',p);}
+  for(const k in CATS){p['r_'+k]=CATS[k].route;p['s_'+k]=CATS[k].show;}
+  for(const k in prefs)if(k.startsWith('poi_'))p[k]=prefs[k];
+  try{for(const k in POI_CATS)p['poi_'+k]=POI_CATS[k].on;}catch(e){}
+  LS.set('pq_prefs',p);}
 
 /* ====================================================================
    OUTILS
@@ -2134,6 +2143,46 @@ function buildControls(){
 }
 $('cadastre').onchange=e=>e.target.checked?cadastre.addTo(map):map.removeLayer(cadastre);
 $('showBarriers').onchange=syncVisibility;$('showAreas').onchange=syncVisibility;
+/* ---- Points d'intérêt (POI) : affichables ou non, par catégorie ---- */
+const POI_CATS={
+  fuel:{label:'Stations essence',icon:'⛽',color:'#0ea5e9',on:true}
+};
+const poiLayers={};let POIS=LS.get('pq_pois',null),poiLoading=false;
+for(const k in POI_CATS){poiLayers[k]=L.layerGroup();if(prefs['poi_'+k]!==undefined)POI_CATS[k].on=prefs['poi_'+k];}
+function poiPopup(k,o){
+  const t=o.tags||{},c=POI_CATS[k],nm=t.name||t.brand||t.operator||c.label.replace(/s /,' ').replace(/s$/,'');
+  const F={'fuel:diesel':'Gazole','fuel:octane_95':'SP95','fuel:e10':'SP95-E10','fuel:octane_98':'SP98','fuel:e85':'E85','fuel:lpg':'GPL','fuel:adblue':'AdBlue'};
+  const fu=Object.keys(F).filter(x=>t[x]==='yes').map(x=>F[x]);
+  const ad=[t['addr:housenumber'],t['addr:street'],t['addr:city']].filter(Boolean).join(' ');
+  const h=t.opening_hours==='24/7'?'Ouvert 24h/24':(t.opening_hours?'Horaires : '+t.opening_hours:'');
+  const la=o.lat.toFixed(6),lo=o.lon.toFixed(6);
+  return el(`<b>${c.icon} ${esc(nm)}</b>${t.brand&&t.brand!==nm?'<br>'+esc(t.brand):''}${ad?'<br><span class="muted">'+esc(ad)+'</span>':''}${fu.length?'<br>'+fu.join(' · '):''}${h?'<br>'+esc(h):''}${t.automated==='yes'||t.self_service==='yes'?'<br>Automate / libre-service':''}
+    <div class="muted" style="margin-top:4px">Infos OpenStreetMap : horaires et carburants à vérifier sur place.</div>
+    <div class="links"><a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${la},${lo}">Y aller (Google Maps)</a><a target="_blank" rel="noopener" href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${la},${lo}">📷 Street View</a></div>`);
+}
+function drawPois(){
+  for(const k in POI_CATS){const lay=poiLayers[k];lay.clearLayers();
+    const want=POI_CATS[k].on&&map.getZoom()>=10;
+    if(!want){map.removeLayer(lay);continue;}
+    for(const o of ((POIS&&POIS.pois&&POIS.pois[k])||[]))
+      L.marker([o.lat,o.lon],{zIndexOffset:300,title:POI_CATS[k].label,icon:L.divIcon({className:'',html:`<div class="poi" style="--c:${POI_CATS[k].color}">${POI_CATS[k].icon}</div>`,iconSize:[28,28],iconAnchor:[14,14]})})
+        .on('click',e=>{L.DomEvent.stopPropagation(e);L.popup().setLatLng([o.lat,o.lon]).setContent(poiPopup(k,o)).openOn(map);}).addTo(lay);
+    if(!map.hasLayer(lay))lay.addTo(map);}
+  const inf=$('poiInfo');if(inf){const n=k=>((POIS&&POIS.pois&&POIS.pois[k])||[]).length;
+    inf.textContent=POIS?Object.keys(POI_CATS).map(k=>n(k)+' '+POI_CATS[k].label.toLowerCase()).join(' · ')+' dans la zone (France uniquement, données OpenStreetMap).':(poiLoading?'Chargement…':'');}
+}
+async function loadPois(){
+  if(poiLoading)return;poiLoading=true;
+  try{const r=await fetch('data/pois.json',{cache:'no-cache'});if(r.ok){const j=await r.json();if(j&&j.pois){POIS=j;try{LS.set('pq_pois',j);}catch(e){}}}}catch(e){}
+  poiLoading=false;drawPois();
+}
+function initPois(){
+  const box=$('poiCats');
+  for(const k in POI_CATS){const c=POI_CATS[k],lab=el(`<label class="row"><input type="checkbox" ${c.on?'checked':''}> ${c.icon} ${c.label}</label>`).firstChild;
+    lab.querySelector('input').onchange=e=>{c.on=e.target.checked;savePrefs();drawPois();};box.appendChild(lab);}
+  let z10=map.getZoom()>=10;map.on('zoomend',()=>{const n=map.getZoom()>=10;if(n!==z10){z10=n;drawPois();}});
+  drawPois();loadPois();
+}
 $('showForests').onchange=e=>e.target.checked?forestLayer.addTo(map):map.removeLayer(forestLayer);
 $('autoLoad').onchange=()=>{savePrefs();autoLoad();};
 
@@ -2223,7 +2272,7 @@ document.addEventListener('keydown',e=>{
   if(prefs.noReuse===false)$('noReuse').checked=false;
   if(prefs.arrows===false)$('showArrows').checked=false;
   if(prefs.svSide===false)$('svSide').checked=false;
-  buildControls();renderSaved();renderHist();updateInfo();syncVisibility();authInit();
+  buildControls();renderSaved();renderHist();updateInfo();syncVisibility();initPois();authInit();
   if(isTouch)collapse(true);else document.body.classList.add('pOpen');
   const got=readHash();
   if(!got){const d=LS.get('pq_draft',null);if(d&&d.wps&&d.wps.length){wps=d.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!d.loop;seedLegs(d.lp);drawWps();}}

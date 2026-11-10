@@ -103,6 +103,14 @@ class Tiler:
         return keys, total
 
 
+# Catégories de points d'intérêt : ajouter une ligne ici (et le filtre osmium du workflow) pour en créer une autre
+POI_CATS = {
+    'fuel': lambda t: t.get('amenity') == 'fuel',
+}
+POI_KEEP = {'name', 'brand', 'operator', 'opening_hours', 'self_service', 'automated', 'phone', 'website',
+            'addr:street', 'addr:housenumber', 'addr:city', 'access'}
+
+
 def main(pbf, outdir):
     import osmium  # pyosmium
 
@@ -125,6 +133,15 @@ def main(pbf, outdir):
 
     tiler = Tiler()
 
+    # Points d'intérêt (POI) : un seul petit fichier pois.json pour toute la zone
+    pois = {k: [] for k in POI_CATS}
+
+    def add_poi(t, lat, lon, oid):
+        for cat, test in POI_CATS.items():
+            if test(t):
+                keep = {k: v for k, v in t.items() if k in POI_KEEP or k.startswith('fuel:')}
+                pois[cat].append({"id": oid, "lat": r7(lat), "lon": r7(lon), "tags": keep})
+
     # Passe 2 : chemins, barrières, forêts (avec coordonnées)
     wkb = osmium.geom.WKBFactory()
 
@@ -143,8 +160,12 @@ def main(pbf, outdir):
                     pass
 
         def node(self, n):
-            if 'barrier' in n.tags and n.location.valid():
+            if not n.location.valid():
+                return
+            if 'barrier' in n.tags:
                 tiler.add_barrier(n.id, {x.k: x.v for x in n.tags}, n.location.lat, n.location.lon)
+            if 'amenity' in n.tags:
+                add_poi({x.k: x.v for x in n.tags}, n.location.lat, n.location.lon, 'n%d' % n.id)
 
         def way(self, w):
             ids, coords = [], []
@@ -154,6 +175,9 @@ def main(pbf, outdir):
                     coords.append((nd.location.lat, nd.location.lon))
             if w.id in rp.need:
                 self.member_geom[w.id] = coords
+            if 'amenity' in w.tags and coords:
+                add_poi({x.k: x.v for x in w.tags}, sum(c[0] for c in coords) / len(coords),
+                        sum(c[1] for c in coords) / len(coords), 'w%d' % w.id)
             hw = w.tags.get('highway')
             if hw and HIGHWAY.match(hw):
                 tiler.add_way(w.id, {x.k: x.v for x in w.tags}, ids, coords)
@@ -206,6 +230,10 @@ def main(pbf, outdir):
             print('::warning::Vérification cadastre impossible :', repr(ex)[:300])
 
     keys, total = tiler.write(outdir)
+    with open(os.path.join(outdir, 'pois.json'), 'w', encoding='utf-8') as f:
+        json.dump({"date": datetime.now(timezone.utc).isoformat(timespec='seconds'), "pois": pois},
+                  f, ensure_ascii=False, separators=(',', ':'))
+    print('::notice::POI : ' + ', '.join(f'{k} {len(v)}' for k, v in pois.items()))
     print(f"::notice::{len(keys)} tuiles, {total / 1e6:.1f} Mo, {dict(tiler.counts)}")
     if not keys:
         sys.exit("Aucune donnée produite : vérifier l'extrait OSM")

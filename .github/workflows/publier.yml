@@ -37,7 +37,7 @@ jobs:
             rm "$r.pbf"
           done
           osmium merge *-zone.pbf -o zone.pbf
-          osmium tags-filter zone.pbf w/highway n/barrier wr/landuse=forest wr/natural=wood r/boundary=protected_area -o filtre.pbf
+          osmium tags-filter zone.pbf w/highway n/barrier nw/amenity=fuel wr/landuse=forest wr/natural=wood r/boundary=protected_area -o filtre.pbf
           ls -lh
 
       - name: Construire les tuiles de données (+ vérification cadastre)
