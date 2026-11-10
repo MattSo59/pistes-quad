@@ -568,7 +568,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v22</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v23</div>
   </div>
 
   </div>
@@ -622,6 +622,7 @@ const DB={db:null,
 const prefs=LS.get('pq_prefs',{});
 if(!LS.get('pq_road_on',false)){prefs.s_road=true;prefs.r_road=true;LS.set('pq_road_on',true);}   // v18 : routes de liaison activées par défaut
 for(const k in CATS){if(prefs['r_'+k]!==undefined&&!CATS[k].locked)CATS[k].route=prefs['r_'+k];if(prefs['s_'+k]!==undefined)CATS[k].show=prefs['s_'+k];}
+let links=LS.get('pq_links',[]);   // liaisons ajoutées à la main : {id,a:[lat,lon],b:[lat,lon]}
 let notes=LS.get('pq_notes',{});   // wayId -> {s:'ok'|'no', n:texte, d:date}
 function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,noReuse:$('noReuse').checked,arrows:$('showArrows').checked,svSide:$('svSide').checked,server:prefs.server||'',gkey:prefs.gkey||''};
   for(const k in CATS){p['r_'+k]=CATS[k].route;p['s_'+k]=CATS[k].show;}
@@ -929,7 +930,7 @@ function drawBarrier(id){
   const imp=IMPASSABLE.has(t.barrier),gate=GATE.has(t.barrier);if(!imp&&!gate)return;
   drawnBarriers.add(id);
   L.circleMarker(p,{renderer,radius:isTouch?6:5,color:'#fff',weight:1.5,fillColor:imp?'#ef4444':'#facc15',fillOpacity:1})
-   .on('click',e=>{L.DomEvent.stopPropagation(e);if(mode==='trace'){addWp(e.latlng);return;}
+   .on('click',e=>{L.DomEvent.stopPropagation(e);if(mode==='trace'){linkMode?makeLink(e.latlng):addWp(e.latlng);return;}
      L.popup().setLatLng(p).setContent(el(`<b>${imp?'Obstacle infranchissable':'Portail / barrière'}</b><br>barrier=${esc(t.barrier)}${t.access?'<br>access='+esc(t.access):''}${linksHTML(p[0],p[1])}`)).openOn(map);})
    .addTo(barrierLayer);
 }
@@ -964,7 +965,7 @@ function linksHTML(lat,lon){
 const SHOW_TAGS=['name','highway','tracktype','surface','smoothness','width','access','vehicle','motor_vehicle','atv','motorcar','agricultural','forestry','motor_vehicle:conditional','foot','horse','ford','note','description'];
 function onWayClick(e){
   L.DomEvent.stopPropagation(e);
-  if(mode==='trace'){addWp(e.latlng);return;}
+  if(mode==='trace'){linkMode?makeLink(e.latlng):addWp(e.latlng);return;}
   openWayPopup(ways.get(e.target._wid),e.latlng);
 }
 function openWayPopup(w,latlng){
@@ -986,7 +987,7 @@ function openWayPopup(w,latlng){
   L.popup({maxWidth:320}).setLatLng(latlng).setContent(node).openOn(map);
 }
 map.on('click',e=>{
-  if(mode==='trace'){addWp(e.latlng);return;}
+  if(mode==='trace'){linkMode?makeLink(e.latlng):addWp(e.latlng);return;}
   L.popup().setLatLng(e.latlng).setContent(el(`<b>Voir ce point</b>${linksHTML(e.latlng.lat,e.latlng.lng)}<div class="links"><button data-a="add">+ Ajouter comme point d'itinéraire</button></div>`)).openOn(map);
   setTimeout(()=>{const b=document.querySelector('.leaflet-popup button[data-a=add]');if(b)b.onclick=()=>{map.closePopup();addWp(e.latlng);};},0);
 });
@@ -1052,6 +1053,33 @@ function buildGraph(){
       if(back){add(b0,target,db*f,db,e[3],e[4]);add(target,a0,da*f,da,e[3],e[4]);}
     }
     add(u,target,bd*1.5+20,bd,ownW,own[4]);add(target,u,bd*1.5+20,bd,ownW,own[4]);bridges++;
+  }
+  /* Liaisons ajoutées à la main (chemin réel mais absent ou coupé dans OpenStreetMap) */
+  for(const lk of links){
+    lk._a=lk._b=null;
+    const a=nearestNode(lk.a,10);if(a==null)continue;
+    let b=nearestNode(lk.b,15);
+    if(b==null||b===a){b=null;
+      const p=lk.b,kx=111320*Math.cos(p[0]*Math.PI/180),ky=110540;let best=null,bd=45;const seen=new Set();
+      const ci=Math.floor(p[0]/CY),cj=Math.floor(p[1]/CX);
+      for(let di=-2;di<=2;di++)for(let dj=-2;dj<=2;dj++)for(const sg of (G.get(cell(ci+di,cj+dj))||[])){
+        if(seen.has(sg))continue;seen.add(sg);const[a0,b0,e]=sg;if(a0===a||b0===a)continue;
+        const A=nodes.get(a0),B=nodes.get(b0);
+        const ax=(A[1]-p[1])*kx,ay=(A[0]-p[0])*ky,bx=(B[1]-p[1])*kx,by=(B[0]-p[0])*ky,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;
+        const t=L2?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L2)):0,d=Math.hypot(ax+t*dx,ay+t*dy);
+        if(d<bd){bd=d;best={a0,b0,e,t,pt:[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t]};}}
+      if(!best)continue;
+      if(best.t<=0.02)b=best.a0;else if(best.t>=0.98)b=best.b0;
+      else{b=-lk.id;nodes.set(b,best.pt);buildGraph._virt.push(b);
+        const{a0,b0,e}=best,f=e[2]?e[1]/e[2]:1,da=hav(best.pt,nodes.get(a0)),db=hav(best.pt,nodes.get(b0));
+        const back=adj.get(b0)&&adj.get(b0).some(x=>x[0]===a0),fwd=adj.get(a0)&&adj.get(a0).some(x=>x[0]===b0);
+        if(fwd){add(a0,b,da*f,da,e[3],e[4]);add(b,b0,db*f,db,e[3],e[4]);}
+        if(back){add(b0,b,db*f,db,e[3],e[4]);add(b,a0,da*f,da,e[3],e[4]);}
+      }
+    }
+    if(b==null||b===a||!adj.get(a))continue;
+    const own=adj.get(a)[0],d=hav(nodes.get(a),nodes.get(b));
+    add(a,b,d,d,own[3],own[4]);add(b,a,d,d,own[3],own[4]);lk._a=a;lk._b=b;
   }
   // vrais culs-de-sac (toujours sans issue après raccordement) : pas de point de passage dessus
   for(const w of ways.values()){if(!CATS[w.cat].route)continue;const a=w.nds[0],b=w.nds[w.nds.length-1];
@@ -1240,6 +1268,29 @@ function routeEnd(){
   const E=nearestNode(ll2a(wps[wps.length-1]),400);return E==null?null:{E,prev:null};
 }
 const nbSet=u=>new Set((adj.get(u)||[]).map(e=>e[0]));
+/* ---- Liaisons à la main : relier le bout du tracé à un chemin ou une route quand la carte a un trou ---- */
+let linkMode=false;const linkLayer=L.layerGroup().addTo(map);
+function saveLinks(){LS.set('pq_links',links.map(l=>({id:l.id,a:l.a,b:l.b})));syncSoon();}
+function drawLinks(){linkLayer.clearLayers();
+  for(const lk of links)L.polyline([lk.a,lk.b],{color:'#22d3ee',weight:5,dashArray:'2 8',lineCap:'round'}).bindTooltip('Liaison ajoutée à la main')
+    .on('click',e=>{L.DomEvent.stopPropagation(e);const n=el('<b>Liaison ajoutée à la main</b><div class="muted">Chemin absent ou coupé sur la carte, relié par toi.</div><div class="links"><button data-a="del">🗑 Supprimer cette liaison</button></div>');
+      n.querySelector('[data-a=del]').onclick=()=>{map.closePopup();links=links.filter(x=>x.id!==lk.id);tomb('l:'+lk.id);saveLinks();drawLinks();graphDirty=true;legCache.clear();computeRoute();toast('Liaison supprimée.',2000);};
+      L.popup().setLatLng(e.latlng).setContent(n).openOn(map);}).addTo(linkLayer);}
+function setLinkMode(v){linkMode=v;map.getContainer().style.cursor=v?'crosshair':'';if(v)toast('Touche l’endroit à rejoindre : la route ou le chemin en couleur, là où ton chemin débouche.',6000);renderJunction();}
+function makeLink(ll){
+  const re=routeEnd();if(!re){toast('Place d’abord ton départ.',3000);setLinkMode(false);return;}
+  const A=nodes.get(re.E),B=[ll.lat,ll.lng],d=hav(A,B);
+  if(d<3){toast('Touche un peu plus loin, sur le chemin à rejoindre.',3000);return;}
+  if(d>600){toast('Trop loin ('+Math.round(d)+' m) : une liaison à la main fait 600 m au plus. Rapproche-toi par étapes.',5000);return;}
+  const lk={id:Date.now(),a:[A[0],A[1]],b:B};links.push(lk);buildGraph();
+  if(lk._a==null||lk._b==null){links.pop();buildGraph();toast('Rien à rejoindre ici : touche une route ou un chemin en couleur (à moins de 45 m).',5000);return;}
+  const Q=nodes.get(lk._b);lk.b=[Q[0],Q[1]];saveLinks();drawLinks();linkMode=false;map.getContainer().style.cursor='';
+  if(wps.length===1&&hav(ll2a(wps[0]),A)>5)wps[0]=L.latLng(A[0],A[1]);
+  const from=wps[wps.length-1],to=L.latLng(Q[0],Q[1]);
+  legCache.set(wkey(from)+'>'+wkey(to),[lk._a,lk._b]);
+  wps.push(to);drawWps();computeRoute();
+  toast('Liaison créée ('+Math.round(hav(A,Q))+' m) ✓ · elle reste enregistrée pour tes prochains tracés',3500);
+}
 function relDir(inB,outB){if(inB==null)return'';const r=((outB-inB)+540)%360-180,a=Math.abs(r);
   return a<25?'tout droit':a>150?'demi-tour':(r>0?(a<60?'légèrement à droite':'à droite'):(a<60?'légèrement à gauche':'à gauche'));}
 function branchesFrom(E,prev){
@@ -1358,10 +1409,12 @@ function renderJunction(){
       :`<div class="jr" data-i="${i}"><div class="num" style="background:${c.color}">${b.n}</div><div class="tx"><b>${branchTitle(b)}</b><span>${km(b.len)}${b.dead?' · cul-de-sac':' jusqu’au prochain carrefour'}${b.name?' · '+esc(b.name):''}${b.later.length?' · puis '+b.later.map(k=>(SHORT[k]||k).toLowerCase()).join(', '):''}</span></div><button class="btn small primary" style="padding:8px 10px">Voir</button><button class="btn small go" data-go="${i}" title="Prendre ce chemin">✓</button></div>`;});
   box.innerHTML=`<div class="jh"><b>${wps.length===1?'Départ':'Carrefour'} · où aller ?</b>${wps.length>1?'<button class="btn small undo" id="jUndo">↩ Annuler</button>':''}<button class="btn small ghost" id="jX">✕</button></div>
     <div class="muted" style="margin:-2px 0 4px">« Voir » pour regarder (photo, Street View), <b style="color:#4ade80">✓</b> pour prendre directement.${isTouch?'':' (touches 1 à 9, Retour arrière = annuler)'}</div>${rows.join('')||'<div class="muted">Aucun chemin praticable ici : touche un autre endroit de la carte.</div>'}
+    <button class="btn small wide" id="jLink" style="margin-top:8px;${linkMode?'background:#22d3ee;color:#0a1426':''}">${linkMode?'✕ Annuler la liaison à la main':'🔗 Mon chemin n’est pas proposé : relier à la main'}</button>
     ${wps.length>1?'<button class="btn acc wide" id="jEnd" style="margin-top:8px">🏁 Terminer ici</button>':''}`;
   box.querySelectorAll('.jr[data-i]').forEach(r=>r.onclick=()=>openPreview(+r.dataset.i));
   box.querySelectorAll('[data-go]').forEach(g=>g.onclick=ev=>{ev.stopPropagation();takeBranch(B[+g.dataset.go]);});
   if($('jEnd'))$('jEnd').onclick=finishRoute;
+  if($('jLink'))$('jLink').onclick=()=>setLinkMode(!linkMode);
   $('jX').onclick=()=>{juncHidden=true;renderJunction();toast('Liste masquée : elle revient au prochain point posé.',2500);};
   if($('jUndo'))$('jUndo').onclick=()=>$('bUndo').onclick();
   drawBranches(B,null);
@@ -1797,7 +1850,7 @@ let tombs=LS.get('pq_tombs',{});
 function tomb(k){tombs[k]=Date.now();LS.set('pq_tombs',tombs);}
 function saveNotes(){LS.set('pq_notes',notes);syncSoon();}
 function syncSoon(){if(!SYNC.on)return;clearTimeout(SYNC.t);SYNC.t=setTimeout(syncPush,3000);}
-function localState(){return{v:4,upd:Date.now(),hist,notes,rides:LS.get('pq_routes',[]).filter(r=>r.type==='ride'),seen:seenPts,tombs};}
+function localState(){return{v:4,upd:Date.now(),hist,notes,links:links.map(l=>({id:l.id,a:l.a,b:l.b})),rides:LS.get('pq_routes',[]).filter(r=>r.type==='ride'),seen:seenPts,tombs};}
 async function apiCall(path,opt={}){
   const h={'Content-Type':'application/json'};if(AUTH)h.Authorization='Bearer '+AUTH.token;
   const r=await fetch(API+path,{method:opt.method||'GET',headers:h,body:opt.body!==undefined?(typeof opt.body==='string'?opt.body:JSON.stringify(opt.body)):undefined,cache:'no-store'});
@@ -1821,6 +1874,11 @@ function mergeRemote(d){
   const byId=new Map(hist.map(h=>[h.id,h]));
   for(const h of d.hist||[]){const mine=byId.get(h.id);if(!mine||(h.upd||0)>(mine.upd||0)){byId.set(h.id,h);changed=true;}}
   hist=[...byId.values()].filter(h=>!tombs['h:'+h.id]);
+  // liaisons à la main
+  {const have=new Set(links.map(l=>l.id));let ch=false;
+    for(const l of d.links||[])if(!have.has(l.id)&&!tombs['l:'+l.id]){links.push({id:l.id,a:l.a,b:l.b});ch=true;}
+    const n0=links.length;links=links.filter(l=>!tombs['l:'+l.id]);
+    if(ch||links.length!==n0){LS.set('pq_links',links.map(l=>({id:l.id,a:l.a,b:l.b})));drawLinks();graphDirty=true;changed=true;}}
   // notes de chemins
   const touched=[];
   for(const id in d.notes||{}){const n=d.notes[id];if(!notes[id]||(n.d||0)>(notes[id].d||0)){notes[id]=n;touched.push(id);}}
@@ -1869,7 +1927,7 @@ async function changePw(){
 async function logout(){
   if(!confirm('Se déconnecter ? Tes données sont sauvegardées sur ton compte et seront effacées de cet appareil.'))return;
   try{await syncPush();await apiCall('/logout',{method:'POST'});}catch(e){}
-  for(const k of ['pq_auth','pq_hist','pq_notes','pq_routes','pq_seen_pts','pq_tombs','pq_cur'])localStorage.removeItem(k);
+  for(const k of ['pq_auth','pq_hist','pq_notes','pq_routes','pq_seen_pts','pq_tombs','pq_cur','pq_links'])localStorage.removeItem(k);
   location.reload();
 }
 async function loadAdmin(){
@@ -2253,6 +2311,7 @@ document.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(mode==='trace'&&/^[1-9]$/.test(k)){const b=juncBranches.findIndex(x=>!x.off&&x.n===+k);if(b>=0){openPreview(b);return;}}
   if(mode==='trace'&&preview!=null&&k==='enter'){const y=$('pYes');if(y)y.click();return;}
+  if(linkMode&&k==='escape'){setLinkMode(false);return;}
   if(mode==='trace'&&preview!=null&&k==='escape'){closePreview();return;}
   if(k==='v'){setTrkVisible(!trkVisible);return;}
   if(k==='e')setMode('explore');else if(k==='t')setMode('trace');
@@ -2272,7 +2331,7 @@ document.addEventListener('keydown',e=>{
   if(prefs.noReuse===false)$('noReuse').checked=false;
   if(prefs.arrows===false)$('showArrows').checked=false;
   if(prefs.svSide===false)$('svSide').checked=false;
-  buildControls();renderSaved();renderHist();updateInfo();syncVisibility();initPois();authInit();
+  buildControls();renderSaved();renderHist();updateInfo();syncVisibility();initPois();drawLinks();authInit();
   if(isTouch)collapse(true);else document.body.classList.add('pOpen');
   const got=readHash();
   if(!got){const d=LS.get('pq_draft',null);if(d&&d.wps&&d.wps.length){wps=d.wps.map(p=>L.latLng(p[0],p[1]));$('loop').checked=!!d.loop;seedLegs(d.lp);drawWps();}}
