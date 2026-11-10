@@ -1,11 +1,15 @@
-name: Données et publication
+name: Publication de l'appli
 
+# L'appli est publiée seule (1 à 2 minutes) : elle reprend les données de carte déjà calculées
+# (branche « donnees », fabriquée par le workflow « Cartographie (données) »).
 on:
   push:
     branches: [main]
+    paths-ignore: ['tools/**', '.github/workflows/donnees.yml', 'PROJET.md']
   workflow_dispatch:
-  schedule:
-    - cron: '17 3 1 * *'   # le 1er de chaque mois : données OSM fraîches
+  workflow_run:
+    workflows: ['Cartographie (données)']
+    types: [completed]
 
 permissions:
   contents: write
@@ -16,36 +20,21 @@ concurrency:
 
 jobs:
   publier:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
-      - name: Outils OSM
+      - name: Reprendre les données de carte
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q osmium-tool
-          pip install --quiet osmium shapely numpy
-
-      - name: Télécharger et découper la zone (Avesnois, Thiérache, Fagne)
-        run: |
-          mkdir -p osm && cd osm
-          # sud, ouest, nord, est -> osmium attend ouest,sud,est,nord
-          BBOX=3.55,49.70,4.55,50.35
-          for r in nord-pas-de-calais picardie champagne-ardenne; do
-            curl -sSfL --retry 3 -o "$r.pbf" "https://download.geofabrik.de/europe/france/$r-latest.osm.pbf"
-            osmium extract -b "$BBOX" -s complete_ways "$r.pbf" -o "$r-zone.pbf"
-            rm "$r.pbf"
-          done
-          osmium merge *-zone.pbf -o zone.pbf
-          osmium tags-filter zone.pbf w/highway n/barrier nw/amenity=fuel wr/landuse=forest wr/natural=wood r/boundary=protected_area -o filtre.pbf
-          ls -lh
-
-      - name: Construire les tuiles de données (+ vérification cadastre)
-        env:
-          BBOX: 3.55,49.70,4.55,50.35
-          CADASTRE_DEPTS: "59 02 08"
-          CADASTRE_CACHE: cadastre
-        run: python3 tools/build_data.py osm/filtre.pbf site/data
+          REPO="https://github.com/${{ github.repository }}.git"
+          # branche « donnees » ; à défaut (première fois), les données déjà en ligne
+          git clone -q --depth 1 --branch donnees "$REPO" _d || git clone -q --depth 1 --branch publication "$REPO" _d
+          rm -rf site/data && mv _d/data site/data && rm -rf _d
+          test -s site/data/index.json
+          du -sh site/data
 
       - name: Déposer l'appli prête sur la branche « publication » (lue par Cloudflare et par GitHub Pages)
         run: |

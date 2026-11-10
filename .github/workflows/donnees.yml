@@ -1,0 +1,78 @@
+name: Cartographie (données)
+
+# Les données de carte (chemins, forêts, cadastre, points d'intérêt) sont recalculées à part de l'appli :
+# le 1er de chaque mois, à la demande (bouton « Run workflow »), ou quand les outils changent.
+# Le résultat est rangé dans la branche « donnees » ; la publication de l'appli vient le chercher.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 1 * *'
+  push:
+    branches: [main]
+    paths: ['tools/**', '.github/workflows/donnees.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: donnees
+  cancel-in-progress: true
+
+env:
+  DEPTS: "59 02 08 80 60"     # départements couverts, en entier
+
+jobs:
+  donnees:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Outils OSM
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q osmium-tool
+          pip install --quiet osmium shapely numpy
+
+      - name: Contour de la zone (départements entiers)
+        run: |
+          mkdir -p osm
+          python3 tools/zone.py osm/zone.geojson $DEPTS
+
+      - name: Télécharger et découper OpenStreetMap
+        run: |
+          cd osm
+          for r in nord-pas-de-calais picardie champagne-ardenne; do
+            curl -sSfL --retry 3 -o "$r.pbf" "https://download.geofabrik.de/europe/france/$r-latest.osm.pbf"
+            osmium extract -p zone.geojson -s complete_ways "$r.pbf" -o "$r-zone.pbf"
+            rm "$r.pbf"
+          done
+          osmium merge *-zone.pbf -o zone.pbf
+          osmium tags-filter zone.pbf w/highway n/barrier nw/amenity=fuel wr/landuse=forest wr/natural=wood r/boundary=protected_area -o filtre.pbf
+          ls -lh
+
+      - name: Cadastre déjà téléchargé (réutilisé d'un mois sur l'autre)
+        uses: actions/cache@v4
+        with:
+          path: cadastre
+          key: cadastre-zone-${{ github.run_id }}
+          restore-keys: cadastre-zone-
+
+      - name: Construire les tuiles de données (+ vérification cadastre)
+        env:
+          CADASTRE_DEPTS: ${{ env.DEPTS }}
+          CADASTRE_CACHE: cadastre
+        run: |
+          python3 tools/build_data.py osm/filtre.pbf sortie/data
+          du -sh sortie/data
+          find sortie/data -size +90M -print -exec false {} +   # aucun fichier trop gros pour GitHub
+
+      - name: Ranger les données dans la branche « donnees »
+        run: |
+          cd sortie
+          git init -q -b donnees
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Données $(date -u +%F)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" donnees

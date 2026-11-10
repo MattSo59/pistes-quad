@@ -25,14 +25,23 @@ def _get(url, timeout=120):
         return r.read()
 
 
-def communes_in_bbox(depts, s, w, n, e, margin=0.06):
+_COMMUNES = {}
+
+
+def communes_list(depts):
+    """[(dept, code, lat, lon)] de toutes les communes des départements (une seule requête par département)."""
     out = []
     for d in depts:
-        for c in json.loads(_get(GEO_API.format(d=d))):
-            lon, lat = c["centre"]["coordinates"]
-            if s - margin <= lat <= n + margin and w - margin <= lon <= e + margin:
-                out.append((d, c["code"]))
+        if d not in _COMMUNES:
+            _COMMUNES[d] = [(d, c["code"], c["centre"]["coordinates"][1], c["centre"]["coordinates"][0])
+                            for c in json.loads(_get(GEO_API.format(d=d))) if c.get("centre")]
+        out.extend(_COMMUNES[d])
     return out
+
+
+def communes_in_bbox(depts, s, w, n, e, margin=0.08):
+    return [(d, c) for d, c, lat, lon in communes_list(depts)
+            if s - margin <= lat <= n + margin and w - margin <= lon <= e + margin]
 
 
 def download(communes, cache_dir):

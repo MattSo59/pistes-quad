@@ -214,20 +214,33 @@ def main(pbf, outdir):
     except Exception as ex:
         print('::warning::Repérage des bois impossible :', repr(ex)[:300])
 
+    # Cadastre : la zone est traitée par carreaux (0,4° x 0,6°) pour ne jamais charger
+    # toutes les parcelles de plusieurs départements en mémoire d'un coup.
     depts = os.environ.get('CADASTRE_DEPTS', '').split()
-    bbox = os.environ.get('BBOX')  # ouest,sud,est,nord
-    if depts and bbox and tiler.tracks:
+    if depts and tiler.tracks:
         import cadastre
-        w, s_, e, n = map(float, bbox.split(','))
-        try:
-            com = cadastre.communes_in_bbox(depts, s_, w, n, e)
-            print(len(com), 'communes au cadastre')
-            paths = cadastre.download(com, os.environ.get('CADASTRE_CACHE', 'cadastre'))
-            polys = cadastre.load_parcels(paths)
-            print(len(polys), 'parcelles,', len(tiler.tracks), 'chemins à vérifier')
-            tiler.apply_cadastre(cadastre.classify({k: v[1] for k, v in tiler.tracks.items()}, polys))
-        except Exception as ex:  # le cadastre est un plus : on publie quand même sans lui
-            print('::warning::Vérification cadastre impossible :', repr(ex)[:300])
+        CLAT, CLON = 0.4, 0.6
+        cells = defaultdict(dict)
+        for wid, (_, coords) in tiler.tracks.items():
+            la, lo = coords[len(coords) // 2]
+            cells[(math.floor(la / CLAT), math.floor(lo / CLON))][wid] = coords
+        cache = os.environ.get('CADASTRE_CACHE', 'cadastre')
+        done = fail = 0
+        print(len(tiler.tracks), 'chemins à vérifier au cadastre, en', len(cells), 'carreaux')
+        for n_, ((i, j), sub) in enumerate(sorted(cells.items()), 1):
+            try:
+                com = cadastre.communes_in_bbox(depts, i * CLAT, j * CLON, (i + 1) * CLAT, (j + 1) * CLON)
+                if not com:
+                    continue
+                polys = cadastre.load_parcels(cadastre.download(com, cache))
+                tiler.apply_cadastre(cadastre.classify(sub, polys))
+                done += len(sub)
+                print(f'carreau {n_}/{len(cells)} : {len(com)} communes, {len(polys)} parcelles, {len(sub)} chemins', flush=True)
+                del polys
+            except Exception as ex:  # le cadastre est un plus : on publie quand même sans lui
+                fail += 1
+                print(f'::warning::Cadastre impossible pour le carreau {i},{j} :', repr(ex)[:300])
+        print(f'cadastre : {done} chemins traités, {fail} carreau(x) en échec')
 
     keys, total = tiler.write(outdir)
     with open(os.path.join(outdir, 'pois.json'), 'w', encoding='utf-8') as f:
