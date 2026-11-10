@@ -568,7 +568,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v24</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v25</div>
   </div>
 
   </div>
@@ -1569,7 +1569,7 @@ function showStats(msg){
   const box=$('stats');
   if(msg){box.innerHTML=`<div class="empty"><svg class="ic"><use href="#i-info"/></svg><span>${esc(msg)}</span></div>`;return;}
   if(!lastRoute){box.innerHTML=`<div class="empty"><svg class="ic"><use href="#i-route"/></svg><span>${wps.length?'Encore un point et le tracé apparaît.':'Pas encore d’itinéraire. Passe en <b>Tracer</b> et touche la carte.'}</span></div>`;return;}
-  const r=lastRoute,road=r.byCat.road||0,h=r.trail/1000/15+road/1000/40,pct=r.dist?Math.round(r.trail/r.dist*100):0;
+  const r=lastRoute,road=r.byCat.road||0,h=r.trail/1000/15+road/1000/40+(r.byCat.gpx||0)/1000/20,pct=r.dist?Math.round(r.trail/r.dist*100):0;
   const ks=Object.keys(CATS).filter(k=>r.byCat[k]);
   let s=`<div class="kpis"><div><span>Distance</span><b>${km(r.dist)}</b></div><div><span>Durée est.</span><b>${dur(h)}</b></div><div class="hl"><span>Chemins verts</span><b>${r.dist?Math.round(r.green/r.dist*100):0} %</b></div></div>
   <div class="mix">${ks.map(k=>`<i style="flex:${r.byCat[k]};background:${CATS[k].color}" title="${CATS[k].label}"></i>`).join('')}</div>
