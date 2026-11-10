@@ -6,7 +6,7 @@
 - Appli web (PWA) pour créer des itinéraires quad / SSV sur chemins autorisés autour de Fourmies (Sud-Avesnois).
 - En ligne : https://mattso59.github.io/pistes-quad/ et https://quad.team-somatcha.fr/ (installables sur iPhone, Android, PC). Connexion avec un compte validé par l'admin.
 - Code : dépôt GitHub public `MattSo59/pistes-quad` (branche `main`). Toute modification poussée est publiée automatiquement (GitHub Actions → branche `publication` → Worker Cloudflare, ~5 min).
-- Version actuelle : v21 (points d'intérêt affichables : stations essence, fichier data/pois.json généré par build_data.py, catégories dans POI_CATS côté outil et côté appli ; v20 : couper le tracé sur la carte ✂, flèches de sens, bouton afficher/masquer le tracé (V), « Ouvrir un GPX pour le modifier », fond IGN 1:25 000 (clé publique ign_scan_ws), Street View en fenêtre à part sur PC, correction des faux carrefours en boucle ; v18 : routes goudronnées affichées par défaut, GPX avec Départ/Arrivée seulement, présentation à jour ; v17 : contrôles automatiques retirés, contrôle à la volée en touchant le tracé, drapeau au vrai bout, pas de grand détour pour éviter un chemin déjà pris ; aucun numéro sur la carte, 📷 = contrôle Street View ; tracé manuel uniquement ; points intermédiaires sans numéro, D et 🏁 seuls ; bouton ✓ direct, « ↩ Annuler », « 🏁 Terminer ici » → GPX CarPlay/OsmAnd, favori, lien) (affichée en bas de l'onglet Aide).
+- Version actuelle : v22 (zone étendue à 5 départements, données séparées de l'appli ; v21 : points d'intérêt affichables : stations essence, fichier data/pois.json généré par build_data.py, catégories dans POI_CATS côté outil et côté appli ; v20 : couper le tracé sur la carte ✂, flèches de sens, bouton afficher/masquer le tracé (V), « Ouvrir un GPX pour le modifier », fond IGN 1:25 000 (clé publique ign_scan_ws), Street View en fenêtre à part sur PC, correction des faux carrefours en boucle ; v18 : routes goudronnées affichées par défaut, GPX avec Départ/Arrivée seulement, présentation à jour ; v17 : contrôles automatiques retirés, contrôle à la volée en touchant le tracé, drapeau au vrai bout, pas de grand détour pour éviter un chemin déjà pris ; aucun numéro sur la carte, 📷 = contrôle Street View ; tracé manuel uniquement ; points intermédiaires sans numéro, D et 🏁 seuls ; bouton ✓ direct, « ↩ Annuler », « 🏁 Terminer ici » → GPX CarPlay/OsmAnd, favori, lien) (affichée en bas de l'onglet Aide).
 - Règle convenue : **mettre à jour le guide PDF et la présentation de démarrage à chaque changement, sans demander.**
 
 ## Hébergement et comptes (v13, 9/11/2026)
@@ -16,6 +16,12 @@
 - KV `DATA` → `pistes-quad-donnees` : `acct:<email>`, `sess:<jeton>`, `data:<email>`, `fail:<email>`.
 - Données synchronisées par compte (historique, favoris, notes, sorties, points vus). Hors ligne : l'appli reste utilisable si on s'est connecté une fois sur l'appareil. Déconnexion = données effacées de l'appareil (gardées sur le compte).
 - Limite : le code de l'appli et les tuiles OSM restent publics (dépôt public) ; ce sont les données des utilisateurs qui sont privées. Mot de passe oublié : l'admin supprime le compte, la personne se réinscrit.
+
+## Données et publication séparées (10/11/2026)
+- Zone couverte : départements 59, 02, 08, 80, 60 entiers (contour = réunion des communes, `tools/zone.py`). 511 tuiles, ~305 Mo, 382 000 voies, 747 stations essence.
+- `.github/workflows/donnees.yml` « Cartographie (données) » : le 1er du mois, à la demande, ou si `tools/**` change. ~15 min. Résultat dans la branche `donnees`. Cadastre traité par carreaux de 0,4° × 0,6° (mémoire), téléchargements gardés en cache.
+- `.github/workflows/publier.yml` « Publication de l'appli » : à chaque push (hors `tools/**`), ~2 min ; reprend `data/` de la branche `donnees` (à défaut `publication`) et pousse la branche `publication`. Se relance seule après la cartographie.
+- Belgique : non couverte (extraits Geofabrik français uniquement, pas de cadastre équivalent, règles différentes).
 
 ## Organisation du dépôt
 - `site/index.html` : toute l'appli (HTML + CSS + JS, Leaflet 1.9.4 via unpkg).

@@ -568,7 +568,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v21</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v22</div>
   </div>
 
   </div>
@@ -944,7 +944,7 @@ function updateInfo(){
   const cnt={},len={};
   for(const w of ways.values()){cnt[w.cat]=(cnt[w.cat]||0)+1;}
   const f=[...new Set([...forests.values()].map(f=>f.name))];
-  $('dataInfo').innerHTML=(staticIdx?`📦 Données Avesnois / Thiérache intégrées (${staticIdx.keys.size} zones, mises à jour le ${new Date(staticIdx.date).toLocaleDateString('fr-FR')}). ${staticIdx.counts&&staticIdx.counts.cad_libre?` Cadastre vérifié : ${staticIdx.counts.cad_libre} chemins hors parcelles, ${staticIdx.counts.cad_parcelle||0} dans une parcelle.`:''} Hors de cette zone : serveurs publics.<br>`:'')+`${loadedTiles.size} zone(s) · ${ways.size.toLocaleString('fr')} voies : `+Object.keys(CATS).filter(k=>cnt[k]).map(k=>`<span style="color:${CATS[k].color}">●${cnt[k]}</span>`).join(' ')+(f.length?`<br>Forêts domaniales détectées : ${f.map(esc).join(', ')}`:'');
+  $('dataInfo').innerHTML=(staticIdx?`📦 Données Nord, Aisne, Ardennes, Somme et Oise intégrées (${staticIdx.keys.size} zones, mises à jour le ${new Date(staticIdx.date).toLocaleDateString('fr-FR')}). ${staticIdx.counts&&staticIdx.counts.cad_libre?` Cadastre vérifié : ${staticIdx.counts.cad_libre} chemins hors parcelles, ${staticIdx.counts.cad_parcelle||0} dans une parcelle.`:''} Hors de cette zone : serveurs publics.<br>`:'')+`${loadedTiles.size} zone(s) · ${ways.size.toLocaleString('fr')} voies : `+Object.keys(CATS).filter(k=>cnt[k]).map(k=>`<span style="color:${CATS[k].color}">●${cnt[k]}</span>`).join(' ')+(f.length?`<br>Forêts domaniales détectées : ${f.map(esc).join(', ')}`:'');
   const nn=Object.keys(notes).length,ok=Object.values(notes).filter(n=>n.s==='ok').length;
   $('notesInfo').textContent=nn?`${ok} chemin(s) vérifié(s) ✓, ${nn-ok} signalé(s) interdit(s) ⛔. Touche un chemin en mode Explorer pour le noter.`:'Aucun. Touche un chemin en mode Explorer pour le noter « ✓ vérifié » ou « ⛔ interdit ». Tes notes passent avant les données OSM.';
 }
@@ -2169,7 +2169,7 @@ function drawPois(){
         .on('click',e=>{L.DomEvent.stopPropagation(e);L.popup().setLatLng([o.lat,o.lon]).setContent(poiPopup(k,o)).openOn(map);}).addTo(lay);
     if(!map.hasLayer(lay))lay.addTo(map);}
   const inf=$('poiInfo');if(inf){const n=k=>((POIS&&POIS.pois&&POIS.pois[k])||[]).length;
-    inf.textContent=POIS?Object.keys(POI_CATS).map(k=>n(k)+' '+POI_CATS[k].label.toLowerCase()).join(' · ')+' dans la zone (France uniquement, données OpenStreetMap).':(poiLoading?'Chargement…':'');}
+    inf.textContent=POIS?Object.keys(POI_CATS).map(k=>n(k)+' '+POI_CATS[k].label.toLowerCase()).join(' · ')+' dans les 5 départements (France uniquement, données OpenStreetMap).':(poiLoading?'Chargement…':'');}
 }
 async function loadPois(){
   if(poiLoading)return;poiLoading=true;
@@ -2231,7 +2231,7 @@ $('bLayers').onclick=()=>showPane('pLayers');
     setTimeout(()=>map.invalidateSize(),300);});
   h.addEventListener('click',()=>{if(!isTouch)collapse(!$('panel').classList.contains('collapsed'));});})();
 const TOUR=[
-  ['i-route','Bienvenue sur Pistes Quad','Un maximum de chemins autorisés aux quads et SSV autour de Fourmies, vérifiés avec OpenStreetMap et le cadastre. 5 écrans, 30 secondes.'],
+  ['i-route','Bienvenue sur Pistes Quad','Un maximum de chemins autorisés aux quads et SSV dans le Nord, l’Aisne, les Ardennes, la Somme et l’Oise, vérifiés avec OpenStreetMap et le cadastre. 5 écrans, 30 secondes.'],
   ['i-key','Lis les couleurs','<b style="color:#22d3ee">Cyan</b> vérifié par toi · <b style="color:#16a34a">vert</b> ouvert ou chemin rural au cadastre · <b style="color:#a3e635">vert clair</b> à vérifier · <b style="color:#facc15">jaune</b> agricole · <b style="color:#c084fc">violet</b> forêt ONF · <b style="color:#d97706">orange pointillé</b> bois non prouvé · <b style="color:#fb7185">rose</b> privé probable · <b style="color:#ef4444">rouge</b> interdit · <b style="color:#60a5fa">bleu</b> route goudronnée (liaison).'],
   ['i-pencil','Trace carrefour par carrefour','Passe en <b style="color:#ff7a1a">Tracer</b> et touche la carte pour ton départ. À chaque carrefour : <b>Voir</b> pour regarder le chemin (photo, 📷 Street View tourné vers lui), ou <b style="color:#22c55e">✓</b> pour le prendre tout de suite. Une erreur ? <b>↩ Annuler</b>.'],
   ['i-cam','Contrôle où tu veux','Touche ton tracé n’importe où : Street View s’ouvre <b>dans le sens de ta marche</b>. <b>✂ Couper ici</b> pour repartir autrement. Un panneau d’interdiction ? Note le chemin <b style="color:#ef4444">⛔ interdit</b>, il ne sera plus proposé. Quand tu as fini : <b>🏁 Terminer ici</b>.'],
