@@ -2,7 +2,7 @@
    - Coque de l'appli : servie depuis le cache, mise à jour en arrière-plan
    - Tuiles de carte : cache d'abord (hors-ligne), limité en nombre
    - Données (Overpass, géocodage, altitude) : réseau uniquement (l'appli les garde elle-même) */
-const SHELL_CACHE = 'pq-shell-v25';
+const SHELL_CACHE = 'pq-shell-v26';
 const TILE_CACHE = 'pq-tiles';
 const MAX_TILES = 8000;
 const SHELL = [
@@ -10,7 +10,7 @@ const SHELL = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
-const TILE_RE = /data\.geopf\.fr\/wmts|tile\.openstreetmap\.org|tile\.opentopomap\.org/;
+const TILE_RE = /data\.geopf\.fr\/(private\/)?wmts|tile\.openstreetmap\.org|tile\.opentopomap\.org/;
 const NET_ONLY_RE = /overpass|geocodage|altimetrie|interpreter|nominatim|\/data\/|\/api\/|cdn-cgi|cloudflareaccess|\.pdf(\?|$)/;
 
 self.addEventListener('install', e => {

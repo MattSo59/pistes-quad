@@ -187,6 +187,8 @@ table.tags{border-collapse:collapse;margin-top:6px}table.tags td{padding:1px 8px
 .wp.s{background:var(--blue)}
 .wp.a{background:#16a34a}
 #roadbook{display:none!important}
+.arw{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:13px solid #fff;filter:drop-shadow(0 0 2px #000a);transform-origin:50% 50%}
+.fab.off{opacity:.55}
 .wpd{width:14px;height:14px;border-radius:50%;background:var(--orange);border:3px solid #fff;box-shadow:0 2px 5px #0009}
 .jr .go{background:#16a34a;color:#fff;border-color:#16a34a;font-weight:800;padding:8px 12px}
 #junc .jh .undo{background:#fff;color:#0a1426;font-weight:800}
@@ -324,6 +326,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
 <div id="fabs">
   <button class="fab glass" id="bSearch" title="Rechercher un lieu (F)"><svg class="ic"><use href="#i-search"/></svg></button>
   <button class="fab glass" id="bGps" title="Ma position (G)"><svg class="ic"><use href="#i-loc"/></svg></button>
+  <button class="fab glass" id="bTrk" title="Afficher / masquer mon tracé (V)"><svg class="ic"><use href="#i-route"/></svg></button>
   <button class="fab glass" id="bLegend" title="Légende"><svg class="ic"><use href="#i-key"/></svg></button>
   <button class="fab glass" id="bLayers" title="Fonds de carte" style="display:none"><svg class="ic"><use href="#i-layers"/></svg></button>
   <button class="fab glass" id="bLoad" title="Charger / rafraîchir les chemins (L)" style="display:none"><svg class="ic"><use href="#i-dl"/></svg></button>
@@ -381,6 +384,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="hero-t"><div class="badge"><svg class="ic"><use href="#i-pencil"/></svg></div><div><b>Construire mon itinéraire</b><span>Carrefour par carrefour, avec Street View tourné vers chaque chemin.</span></div></div>
       <div class="muted" style="color:#cfe0ff">1. Passe en <b>Tracer</b> et touche la carte pour placer ton départ.<br>2. Choisis un chemin dans la liste en bas de la carte, et ainsi de suite.<br>3. Continue jusqu’à ton arrivée, carrefour par carrefour.</div>
       <div class="row2" style="margin-top:12px"><button class="btn acc wide" id="bStart"><svg class="ic"><use href="#i-pencil"/></svg>Commencer un tracé</button></div>
+      <label class="btn wide" style="margin-top:8px;justify-content:center;cursor:pointer">📂 Ouvrir un GPX pour le modifier<input type="file" id="gpxEdit" accept=".gpx,application/gpx+xml,application/xml,text/xml" style="display:none"></label>
       
     </section>
 
@@ -416,6 +420,8 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <summary>Réglages du tracé</summary>
       <input type="checkbox" id="loop" hidden>
       <label class="row"><input type="checkbox" id="noReuse" checked> Éviter les allers-retours</label>
+      <label class="row"><input type="checkbox" id="showArrows" checked> Flèches de sens sur le tracé</label>
+      <label class="row pc-only"><input type="checkbox" id="svSide" checked> Street View dans une fenêtre à part (2ᵉ écran)</label>
       <div class="muted" style="margin-bottom:4px">Le tracé peut emprunter :</div>
       <div id="routeCats"></div>
       <h3>Préférence</h3>
@@ -556,7 +562,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v18</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v19</div>
   </div>
 
   </div>
@@ -611,7 +617,7 @@ const prefs=LS.get('pq_prefs',{});
 if(!LS.get('pq_road_on',false)){prefs.s_road=true;prefs.r_road=true;LS.set('pq_road_on',true);}   // v18 : routes de liaison activées par défaut
 for(const k in CATS){if(prefs['r_'+k]!==undefined&&!CATS[k].locked)CATS[k].route=prefs['r_'+k];if(prefs['s_'+k]!==undefined)CATS[k].show=prefs['s_'+k];}
 let notes=LS.get('pq_notes',{});   // wayId -> {s:'ok'|'no', n:texte, d:date}
-function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,noReuse:$('noReuse').checked,server:prefs.server||'',gkey:prefs.gkey||''};
+function savePrefs(){const p={base:curBase,auto:$('autoLoad').checked,pref:$('pref').value,noReuse:$('noReuse').checked,arrows:$('showArrows').checked,svSide:$('svSide').checked,server:prefs.server||'',gkey:prefs.gkey||''};
   for(const k in CATS){p['r_'+k]=CATS[k].route;p['s_'+k]=CATS[k].show;}LS.set('pq_prefs',p);}
 
 /* ====================================================================
@@ -640,6 +646,7 @@ L.control.scale({imperial:false,position:'bottomleft'}).addTo(map);
 const ign=(layer,fmt,style,maxN)=>{const t=L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER='+layer+'&STYLE='+encodeURIComponent(style||'normal')+'&TILEMATRIXSET=PM&FORMAT='+fmt+'&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',{maxNativeZoom:maxN||18,maxZoom:20,attribution:'© IGN Géoplateforme'});t._ign=true;return t;};
 const BASES={
   'Plan IGN':ign('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2','image/png','normal',18),
+  'Carte IGN 1:25 000 (TOP 25)':(()=>{const t=L.tileLayer('https://data.geopf.fr/private/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&apikey=ign_scan_ws',{maxNativeZoom:16,maxZoom:20,attribution:'© IGN SCAN 25'});t._ign=true;return t;})(),
   'Photos aériennes IGN':ign('ORTHOIMAGERY.ORTHOPHOTOS','image/jpeg','normal',19),
   'OpenStreetMap':L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxNativeZoom:19,maxZoom:20,attribution:'© OpenStreetMap'}),
   'Topo (OpenTopoMap)':L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxNativeZoom:17,maxZoom:20,attribution:'© OpenTopoMap, OSM'})
@@ -1464,7 +1471,7 @@ function computeRoute(){
     for(const t of r.tr)L.polyline(t.coords,{color:CATS[t.cat].color,weight:3.5,interactive:false}).addTo(routeLayer);
     const cum=[0];for(let i=1;i<r.coords.length;i++)cum.push(cum[i-1]+hav(r.coords[i-1],r.coords[i]));r.cum=cum;
   }
-  lastRoute=r;placeFlag();showStats();drawEntries();renderRoadbook();saveDraft();clearTimeout(histT);histT=setTimeout(histUpsert,1200);
+  lastRoute=r;placeFlag();drawArrows();showStats();drawEntries();renderRoadbook();saveDraft();clearTimeout(histT);histT=setTimeout(histUpsert,1200);
   juncHidden=false;preview=null;renderJunction();renderTimeline();
 }
 function showStats(msg){
@@ -1502,8 +1509,103 @@ function routeCheckAt(ll){
   const p=r.coords[k],h=Math.round(brg(a,b)),hb=(h+180)%360;
   const sv=hd=>`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${p[0].toFixed(6)},${p[1].toFixed(6)}&heading=${hd}&pitch=-5&fov=80`;
   const node=el(`<b>Contrôle ici</b><div class="links"><a target="_blank" rel="noopener" href="${sv(h)}" data-sv>📷 Street View · sens du tracé</a><a target="_blank" rel="noopener" href="${sv(hb)}" data-sv>📷 Street View · regarder derrière</a><a target="_blank" rel="noopener" href="https://api.panoramax.xyz/#focus=map&map=18/${p[0].toFixed(6)}/${p[1].toFixed(6)}">Panoramax</a><a target="_blank" rel="noopener" href="https://www.geoportail.gouv.fr/carte?c=${p[1].toFixed(6)},${p[0].toFixed(6)}&z=18&l0=ORTHOIMAGERY.ORTHOPHOTOS::GEOPORTAIL:OGC:WMTS(1)&permalink=yes">Photo aérienne</a></div>`);
+  const cb=document.createElement('button');cb.className='btn small wide';cb.style.marginTop='8px';cb.textContent='✂ Couper le tracé ici (pour repartir autrement)';
+  cb.onclick=()=>{if(!cb.dataset.c){cb.dataset.c=1;cb.textContent='Confirmer : supprimer la suite du tracé';cb.style.background='#b91c1c';cb.style.color='#fff';return;}cutRouteAt(k);};
+  node.appendChild(cb);
   L.popup().setLatLng(p).setContent(node).openOn(map);
 }
+/* Couper le tracé à un endroit : on garde le début, on repart de là carrefour par carrefour */
+function cutRouteAt(k){
+  const r=lastRoute;if(!r)return;map.closePopup();
+  let li=r.legs.findIndex(lg=>k>=lg.s&&k<=lg.e);if(li<0)li=r.legs.length-1;
+  const lg=r.legs[li],p=r.coords[k];
+  let keep=wps.slice(0,li+1);
+  if(k>=lg.e)keep=wps.slice(0,li+2);
+  else if(k>lg.s)keep.push(L.latLng(p[0],p[1]));
+  if(keep.length<1)keep=[wps[0]];
+  wps=keep;$('finishBox').innerHTML='';setMode('trace');drawWps();computeRoute();
+  toast('Tracé coupé ici ✂ · choisis la suite dans la liste',3000);
+}
+/* Flèches de sens le long du tracé */
+const arrowLayer=L.layerGroup();
+function drawArrows(){
+  arrowLayer.clearLayers();const r=lastRoute;
+  if(!r||r.coords.length<2||!$('showArrows').checked||!trkVisible){return;}
+  if(!map.hasLayer(arrowLayer))arrowLayer.addTo(map);
+  const c=map.getCenter(),mpp=40075016*Math.cos(c.lat*Math.PI/180)/Math.pow(2,map.getZoom()+8);
+  const step=Math.max(60,mpp*130);let next=step*0.5,cum=0,n=0;
+  for(let i=1;i<r.coords.length&&n<300;i++){const a=r.coords[i-1],b=r.coords[i],d=hav(a,b);if(d<=0)continue;
+    while(cum+d>=next&&n<300){const t=(next-cum)/d,q=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+      L.marker(q,{interactive:false,keyboard:false,zIndexOffset:-200,icon:L.divIcon({className:'',html:`<div class="arw" style="transform:rotate(${Math.round(brg(a,b))}deg)"></div>`,iconSize:[12,13],iconAnchor:[6,6]})}).addTo(arrowLayer);
+      n++;next+=step;}
+    cum+=d;}
+}
+/* Afficher / masquer le tracé (pour bien voir la carte ou la photo aérienne dessous) */
+let trkVisible=true;
+function setTrkVisible(v){trkVisible=v;
+  for(const l of [routeLayer,wpLayer])v?l.addTo(map):map.removeLayer(l);
+  if(!v)map.removeLayer(arrowLayer);
+  $('bTrk').classList.toggle('on',v);$('bTrk').classList.toggle('off',!v);drawArrows();
+  toast(v?'Tracé affiché':'Tracé masqué (bouton ou touche V pour le revoir)',2200);}
+/* Street View & co dans une fenêtre à part, placée sur le 2ᵉ écran quand il y en a un */
+let sideWin=null,sideScr=null;
+function openSide(url){
+  const w=1100,h=850;
+  let f='popup=yes,width='+w+',height='+h;
+  if(sideScr)f=`popup=yes,left=${sideScr.availLeft+20},top=${sideScr.availTop+20},width=${Math.max(600,sideScr.availWidth-40)},height=${Math.max(500,sideScr.availHeight-60)}`;
+  const first=!sideWin||sideWin.closed;
+  sideWin=window.open(url,'pq_streetview',f);
+  if(!sideWin)return false;
+  try{sideWin.focus();}catch(e){}
+  if(first&&!sideScr&&window.getScreenDetails){
+    window.getScreenDetails().then(d=>{const o=d.screens.find(x=>x!==d.currentScreen);if(!o)return;sideScr=o;
+      try{sideWin.moveTo(o.availLeft+20,o.availTop+20);sideWin.resizeTo(Math.max(600,o.availWidth-40),Math.max(500,o.availHeight-60));}catch(e){}}).catch(()=>{});
+  }
+  return true;
+}
+document.addEventListener('click',e=>{
+  if(isTouch||!$('svSide')||!$('svSide').checked)return;
+  const a=e.target.closest&&e.target.closest('a[target="_blank"]');if(!a)return;
+  if(!/google\.com\/maps|panoramax|mapillary|geoportail/.test(a.href))return;
+  if(openSide(a.href))e.preventDefault();
+});
+/* Ouvrir un GPX pour le modifier : la trace devient un itinéraire de l'appli */
+function simplifyTrack(pts,tol,maxGap){
+  const keep=new Uint8Array(pts.length);keep[0]=keep[pts.length-1]=1;
+  const st=[[0,pts.length-1]];
+  const dseg=(p,a,b)=>{const kx=Math.cos(a[0]*Math.PI/180)*111320,ky=110540;const x=(p[1]-a[1])*kx,y=(p[0]-a[0])*ky,bx=(b[1]-a[1])*kx,by=(b[0]-a[0])*ky;const l=bx*bx+by*by;let t=l?(x*bx+y*by)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(x-t*bx,y-t*by);};
+  while(st.length){const[a,b]=st.pop();let m=-1,md=tol;for(let i=a+1;i<b;i++){const d=dseg(pts[i],pts[a],pts[b]);if(d>md){md=d;m=i;}}
+    if(m>0){keep[m]=1;st.push([a,m],[m,b]);}}
+  const out=[];let last=null,acc=0;
+  for(let i=0;i<pts.length;i++){if(i)acc+=hav(pts[i-1],pts[i]);
+    if(keep[i]||acc>=maxGap){if(!last||hav(last,pts[i])>15||i===pts.length-1){out.push(pts[i]);last=pts[i];}acc=0;}}
+  return out;
+}
+async function gpxToRoute(pts,name){
+  const total=pts.reduce((d,p,i)=>i?d+hav(pts[i-1],p):0,0);
+  let tol=25,W=simplifyTrack(pts,tol,400);
+  while(W.length>160&&tol<200){tol*=1.5;W=simplifyTrack(pts,tol,600);}
+  curId=null;lastRoute=null;legCache.clear();$('loop').checked=false;$('finishBox').innerHTML='';
+  wps=W.map(p=>L.latLng(p[0],p[1]));
+  if(!trkVisible)setTrkVisible(true);
+  setMode('explore');drawWps();
+  const b=L.latLngBounds(pts).pad(0.12);map.fitBounds(b);
+  toast('GPX « '+name+' » : chargement des chemins…',4000);
+  try{await ensureTiles(tilesIn(b),false,'GPX à modifier');}catch(e){}
+  computeRoute();
+  const r=lastRoute,f=r?r.fails.length:0;
+  toast(r?`GPX prêt à modifier : ${km(r.dist)} (original ${km(total)})`+(f?` · ${f} passage(s) hors chemins connus, en pointillé`:'')+'. Déplace les points, coupe ✂ ou passe en Tracer.':'GPX chargé, mais aucun chemin connu dessous (hors zone ?).',7000);
+}
+$('gpxEdit').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const doc=new DOMParser().parseFromString(await f.text(),'application/xml');
+    let pts=[...doc.querySelectorAll('trkpt')];if(pts.length<2)pts=[...doc.querySelectorAll('rtept')];if(pts.length<2)pts=[...doc.querySelectorAll('wpt')];
+    pts=pts.map(p=>[+p.getAttribute('lat'),+p.getAttribute('lon')]).filter(p=>p.every(isFinite));
+    if(pts.length<2)throw new Error('aucun point dans ce fichier');
+    if(wps.length>1&&!confirm('Remplacer le tracé en cours par ce GPX ? (le tracé actuel reste dans l’historique)'))return;
+    await gpxToRoute(pts,f.name.replace(/\.gpx$/i,''));
+  }catch(err){toast('GPX illisible : '+err.message,4000);}
+};
 let flagM=null;
 function placeFlag(){if(flagM){flagM.remove();flagM=null;}
   const r=lastRoute;if(!r||r.coords.length<2||wps.length<2)return;
@@ -1527,6 +1629,9 @@ $('bClear').onclick=()=>{$('finishBox').innerHTML='';legCache.clear();curId=null
 $('bRev').onclick=()=>{wps.reverse();drawWps();scheduleRoute();};
 $('loop').onchange=scheduleRoute;
 $('noReuse').onchange=()=>{savePrefs();scheduleRoute();};
+$('showArrows').onchange=()=>{savePrefs();drawArrows();};$('svSide').onchange=savePrefs;
+$('bTrk').onclick=()=>setTrkVisible(!trkVisible);$('bTrk').classList.add('on');
+map.on('zoomend',drawArrows);
 $('pref').oninput=()=>{graphDirty=true;legCache.clear();savePrefs();scheduleRoute();};
 
 
@@ -2080,7 +2185,7 @@ const TOUR=[
   ['i-route','Bienvenue sur Pistes Quad','Un maximum de chemins autorisés aux quads et SSV autour de Fourmies, vérifiés avec OpenStreetMap et le cadastre. 5 écrans, 30 secondes.'],
   ['i-key','Lis les couleurs','<b style="color:#22d3ee">Cyan</b> vérifié par toi · <b style="color:#16a34a">vert</b> ouvert ou chemin rural au cadastre · <b style="color:#a3e635">vert clair</b> à vérifier · <b style="color:#facc15">jaune</b> agricole · <b style="color:#c084fc">violet</b> forêt ONF · <b style="color:#d97706">orange pointillé</b> bois non prouvé · <b style="color:#fb7185">rose</b> privé probable · <b style="color:#ef4444">rouge</b> interdit · <b style="color:#60a5fa">bleu</b> route goudronnée (liaison).'],
   ['i-pencil','Trace carrefour par carrefour','Passe en <b style="color:#ff7a1a">Tracer</b> et touche la carte pour ton départ. À chaque carrefour : <b>Voir</b> pour regarder le chemin (photo, 📷 Street View tourné vers lui), ou <b style="color:#22c55e">✓</b> pour le prendre tout de suite. Une erreur ? <b>↩ Annuler</b>.'],
-  ['i-cam','Contrôle où tu veux','Touche ton tracé n’importe où : Street View s’ouvre <b>dans le sens de ta marche</b>. Un panneau d’interdiction ? Note le chemin <b style="color:#ef4444">⛔ interdit</b>, il ne sera plus proposé. Quand tu as fini : <b>🏁 Terminer ici</b>.'],
+  ['i-cam','Contrôle où tu veux','Touche ton tracé n’importe où : Street View s’ouvre <b>dans le sens de ta marche</b>. <b>✂ Couper ici</b> pour repartir autrement. Un panneau d’interdiction ? Note le chemin <b style="color:#ef4444">⛔ interdit</b>, il ne sera plus proposé. Quand tu as fini : <b>🏁 Terminer ici</b>.'],
   ['i-ride','Retrouve et roule','Chaque itinéraire est gardé tout seul : aperçus en haut de <b>Tracé</b>, liste dans <b>Tracés</b>, ⭐ pour tes favoris. <b>Balade</b> pour le GPS, <b>🚗 GPX</b> pour OsmAnd / CarPlay.<br><br><b>Le panneau sur place fait toujours foi.</b> Guide complet : Aide → Guide PDF.']];
 let tourI=0;
 function tour(i){tourI=i;const w=$('welcome');w.style.display='flex';const t=TOUR[i];
@@ -2100,6 +2205,7 @@ document.addEventListener('keydown',e=>{
   if(mode==='trace'&&/^[1-9]$/.test(k)){const b=juncBranches.findIndex(x=>!x.off&&x.n===+k);if(b>=0){openPreview(b);return;}}
   if(mode==='trace'&&preview!=null&&k==='enter'){const y=$('pYes');if(y)y.click();return;}
   if(mode==='trace'&&preview!=null&&k==='escape'){closePreview();return;}
+  if(k==='v'){setTrkVisible(!trkVisible);return;}
   if(k==='e')setMode('explore');else if(k==='t')setMode('trace');
   else if(k==='z'||k==='backspace'){e.preventDefault();$('bUndo').onclick();}
   else if(k==='f'){e.preventDefault();$('searchBox').style.display='block';$('q').focus();}
@@ -2115,6 +2221,8 @@ document.addEventListener('keydown',e=>{
   if(prefs.pref)$('pref').value=prefs.pref;
   showStats();
   if(prefs.noReuse===false)$('noReuse').checked=false;
+  if(prefs.arrows===false)$('showArrows').checked=false;
+  if(prefs.svSide===false)$('svSide').checked=false;
   buildControls();renderSaved();renderHist();updateInfo();syncVisibility();authInit();
   if(isTouch)collapse(true);else document.body.classList.add('pOpen');
   const got=readHash();
