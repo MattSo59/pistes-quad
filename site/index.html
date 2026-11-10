@@ -562,7 +562,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v19</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v20</div>
   </div>
 
   </div>
@@ -1027,7 +1027,7 @@ function buildGraph(){
     let best=null,bd=12;const seen=new Set();
     const ci=Math.floor(p[0]/CY),cj=Math.floor(p[1]/CX);
     for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++)for(const sg of (G.get(cell(ci+di,cj+dj))||[])){
-      if(seen.has(sg))continue;seen.add(sg);const[a0,b0,e]=sg;if(a0===u||b0===u||e[3]===ownW)continue;
+      if(seen.has(sg))continue;seen.add(sg);const[a0,b0,e]=sg;if(a0===u||b0===u||e[3]===ownW||a0===own[0]||b0===own[0])continue;   // pas de raccord sur un segment qui touche déjà le chemin (petit bout au ras d'un carrefour)
       const A=nodes.get(a0),B=nodes.get(b0);
       const ax=(A[1]-p[1])*kx,ay=(A[0]-p[0])*ky,bx=(B[1]-p[1])*kx,by=(B[0]-p[0])*ky,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;
       const t=L2?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L2)):0,x=ax+t*dx,y=ay+t*dy,d=Math.hypot(x,y);
@@ -1237,9 +1237,9 @@ function branchesFrom(E,prev){
   const out=[],pE=nodes.get(E),inB=prev!=null?brg(nodes.get(prev),pE):null;
   for(const v of nbSet(E)){
     if(v===prev)continue;
-    const path=[E,v];let cur=v,pv=E,len=0,first=edgeOf(E,v);if(!first)continue;len=first[2];const ws=[first[3]];
-    while(len<4000){const ns=nbSet(cur);if(ns.size!==2||cur===E)break;let nx=null;for(const x of ns)if(x!==pv)nx=x;const ed=nx!=null&&edgeOf(cur,nx);if(!ed)break;
-      path.push(nx);len+=ed[2];ws.push(ed[3]);pv=cur;cur=nx;}
+    const path=[E,v],inPath=new Set([E,v]);let cur=v,pv=E,len=0,first=edgeOf(E,v);if(!first)continue;len=first[2];const ws=[first[3]];
+    while(len<4000){const ns=nbSet(cur);if(ns.size!==2||cur===E)break;let nx=null;for(const x of ns)if(x!==pv)nx=x;const ed=nx!=null&&edgeOf(cur,nx);if(!ed||inPath.has(nx))break;
+      path.push(nx);inPath.add(nx);len+=ed[2];ws.push(ed[3]);pv=cur;cur=nx;}
     const cs=path.map(n=>nodes.get(n)),w0=ways.get(ws[0]),cat=w0?w0.cat:'road';
     const later=[...new Set(ws.map(w=>(ways.get(w)||{}).cat))].filter(c=>c&&c!==cat);
     const head=Math.round(brg(pE,alongPt(cs,25)));
@@ -1578,7 +1578,7 @@ function simplifyTrack(pts,tol,maxGap){
     if(m>0){keep[m]=1;st.push([a,m],[m,b]);}}
   const out=[];let last=null,acc=0;
   for(let i=0;i<pts.length;i++){if(i)acc+=hav(pts[i-1],pts[i]);
-    if(keep[i]||acc>=maxGap){if(!last||hav(last,pts[i])>15||i===pts.length-1){out.push(pts[i]);last=pts[i];}acc=0;}}
+    if(keep[i]||acc>=maxGap){if(!last||acc>=60||hav(last,pts[i])>15||i===pts.length-1){out.push(pts[i]);last=pts[i];acc=0;}}}
   return out;
 }
 async function gpxToRoute(pts,name){
