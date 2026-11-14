@@ -569,7 +569,7 @@ kbd{background:var(--card2);border-radius:5px;padding:1px 6px;font-size:12.5px;b
       <div class="btns"><button class="btn small primary" id="bDiag">Tester les serveurs</button></div>
       <div id="diag"></div>
     </details>
-    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v26</div>
+    <div class="muted" style="text-align:center;margin-top:8px">Données © contributeurs OpenStreetMap (ODbL) · Cartes © IGN Géoplateforme · v27</div>
   </div>
 
   </div>
@@ -664,7 +664,9 @@ const BASES={
   'OpenStreetMap':L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxNativeZoom:19,maxZoom:20,attribution:'© OpenStreetMap'}),
   'Topo (OpenTopoMap)':L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxNativeZoom:17,maxZoom:20,attribution:'© OpenTopoMap, OSM'})
 };
-let curBase=prefs.base&&BASES[prefs.base]?prefs.base:'Plan IGN';
+const BASE_DEF='Carte IGN 1:25 000 (TOP 25)';
+if(!LS.get('pq_base25',false)){prefs.base=BASE_DEF;LS.set('pq_base25',true);}   // v27 : carte IGN 1:25 000 par défaut (une fois, y compris pour ceux qui avaient déjà l'appli)
+let curBase=prefs.base&&BASES[prefs.base]?prefs.base:BASE_DEF;
 BASES[curBase].addTo(map);
 const cadastre=ign('CADASTRALPARCELS.PARCELLAIRE_EXPRESS','image/png','PCI vecteur',19);cadastre.options.opacity=0.85;
 const renderer=L.canvas({padding:0.4,tolerance:isTouch?14:8});
